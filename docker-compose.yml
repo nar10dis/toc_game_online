@@ -1,49 +1,49 @@
-services: 
-  backend: 
-    depends_on: 
+services:
+  backend:
+    depends_on:
       - postgres
     build: ./backend
     container_name: backend
     env_file:
       - .env
-    ports: 
+    ports:
       - "3001:3001"
-    networks: 
+    networks:
       - docker-network
-    
-  frontend: 
+
+  frontend:
     build: ./frontend
     container_name: frontend
     env_file:
       - .env
-    ports: 
+    ports:
       - "3000:3000"
-    networks: 
+    networks:
       - docker-network
 
-  nginx: 
+  nginx:
     build: ./nginx
     container_name: nginx
     env_file:
       - .env
-    ports: 
-      - "443:443"
+    ports:
+      - "8080:443"
     networks:
       - docker-network
-    
+
   postgres:
     image: postgres:18.4-alpine3.24
     env_file:
       - .env
-    networks: 
+    networks:
       - docker-network
-    volumes: 
+    volumes:
       - db_data:/var/lib/postgresql
 
 
-networks: 
-  docker-network: 
+networks:
+  docker-network:
     driver: bridge
 
-volumes: 
-  db_data: 
+volumes:
+  db_data:
