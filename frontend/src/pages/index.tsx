@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { CardTable } from "@/components/game/CardTable";
 import { usePlayerHand } from "@/hooks/usePlayerHand";
 import { useViewportSize } from "@/hooks/useViewportSize";
+import {Board} from "@/pages/game/Board";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -30,14 +31,22 @@ export default function Home() {
 
       {isDeckEmpty && <h1>Deck is empty!</h1>}
 
-      <CardTable
-        cardsInHand={cardsInHand}
-        playedCards={playedCards}
-        isPlayingCard={isPlayingCard}
-        viewportSize={viewportSize}
-        onPlayCard={playCard}
-        onPlayedCardArrived={finishPlayingCard}
-      />
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}>
+        <CardTable
+            cardsInHand={cardsInHand}
+            playedCards={playedCards}
+            isPlayingCard={isPlayingCard}
+            viewportSize={viewportSize}
+            onPlayCard={playCard}
+            onPlayedCardArrived={finishPlayingCard}
+        />
+
+        <Board />
+      </div>
     </main>
   );
 }

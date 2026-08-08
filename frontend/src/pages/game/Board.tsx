@@ -1,5 +1,6 @@
 import { TestCircle } from "../shapes/TestCircle";
 import { Circle } from "../shapes/Circle";
+import { motion } from "motion/react";
 
 const BOARD_SIZE = 1500;
 
@@ -78,27 +79,39 @@ export function computeCoordsFromIndex({ index, boardSize = BOARD_SIZE }) {
   return rotate(local, arm, g.c);
 }
 
-export function Board({ size = 1500, boardSize = BOARD_SIZE }) {
+export function Board({boardSize = BOARD_SIZE}) {
   const cells = Array.from({ length: TOTAL_CELLS }, (_, i) => i);
 
   return (
-    <svg viewBox={`0 0 ${boardSize} ${boardSize}`} style={{ width: size, height: size }}>
-      <rect x={0} y={0} width={boardSize} height={boardSize} fill="white" />
+    <svg viewBox={`0 0 ${boardSize} ${boardSize}`} style={{
+      width: "90vmin",
+      height: "auto",
+      display: "block"
+    }}>
+      {/*<rect x={0} y={0} width={boardSize} height={boardSize} fill="white" />*/}
       {cells.map((i) => {
         const { x, y } = computeCoordsFromIndex({ index: i, boardSize });
         return (
-          <Circle
-            key={i}
-            r={20}
-            cx={x}
-            cy={y}
-            fill="none"
-            stroke="black"
-            strokeWidth={4}
-            label={i + 1}
-          />
+            <motion.g
+                key={i}
+                initial={{ opacity: 0, scale: 0, }}
+                animate={{ opacity: 1, scale: 1, }}
+                transition={{ delay: i * 0.02, type: "spring", stiffness: 400, damping: 20, }}
+                style={{ transformOrigin: `${x}px ${y}px`, }}>
+              <Circle r={20} cx={x} cy={y} fill="none" stroke="black" strokeWidth={4} />
+            </motion.g>
         );
       })}
     </svg>
   );
 }
+// <Circle
+//   key={i}
+//   r={20}
+//   cx={x}
+//   cy={y}
+//   fill="none"
+//   stroke="black"
+//   strokeWidth={4}
+//   label={i + 1}
+// />
