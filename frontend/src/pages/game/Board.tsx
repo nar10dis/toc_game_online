@@ -9,6 +9,50 @@ const CORNER_CELLS = 5;                            // cells rounding the corner
 const CELLS_PER_ARM = ARM_CELLS + CORNER_CELLS;    // 18
 export const TOTAL_CELLS = CELLS_PER_ARM * 4;      // 72
 
+const HOME_CELLS = 4;
+
+const TEAM_COLORS = [
+  "#d95757", // top
+  "#4d82b8", // right
+  "#d3a936", // bottom
+  "#57936f", // left
+];
+
+const HOME_CELL_SPACING = 80;
+
+function computeHomeCoords(
+    homeIndex: number,
+    boardSize = BOARD_SIZE
+) {
+  const g = geometry(boardSize);
+
+  const team = Math.floor(homeIndex / HOME_CELLS);
+  const cell = homeIndex % HOME_CELLS;
+
+  // Tile 15 of this arm.
+  const cell15 = computeCoordsFromIndex({
+    index: team * CELLS_PER_ARM + 15,
+    boardSize,
+  });
+
+  // Direction from tile 15 toward the center.
+  const dx = g.c - cell15.x;
+  const dy = g.c - cell15.y;
+
+  const length = Math.hypot(dx, dy);
+
+  const dirX = dx / length;
+  const dirY = dy / length;
+
+  // Start just inside tile 15 and continue toward the center.
+  const distance = (cell + 1) * HOME_CELL_SPACING;
+
+  return {
+    x: cell15.x + dirX * distance,
+    y: cell15.y + dirY * distance,
+  };
+}
+
 // geometry, as fractions of the board so everything scales together
 const ARM_RADIUS = 350 / 1500;   // radius of the scallop
 const ARM_INSET = 90 / 1500;     // scallop centre's distance from the top edge
@@ -79,8 +123,103 @@ export function computeCoordsFromIndex({ index, boardSize = BOARD_SIZE }) {
   return rotate(local, arm, g.c);
 }
 
+function calculateDrawTimings(
+    cells: number[],
+    boardSize: number
+) {
+  const DRAW_DURATION = 0.18;
+  const PEN_SPEED = 2000;
+
+  const timings = new Array(TOTAL_CELLS);
+
+  // Four independent pens.
+  for (let arm = 0; arm < 4; arm++) {
+    const startIndex = arm * CELLS_PER_ARM;
+    const endIndex = startIndex + CELLS_PER_ARM;
+
+    let elapsed = 0;
+
+    for (let index = startIndex; index < endIndex; index++) {
+      const current = computeCoordsFromIndex({
+        index,
+        boardSize,
+      });
+
+      // Move from the previous cell of THIS arm.
+      if (index > startIndex) {
+        const previous =
+            computeCoordsFromIndex({
+              index: index - 1,
+              boardSize,
+            });
+
+        const distance = Math.hypot(
+            current.x - previous.x,
+            current.y - previous.y
+        );
+
+        elapsed += distance / PEN_SPEED;
+      }
+
+      timings[index] = {
+        delay: elapsed,
+        duration: DRAW_DURATION,
+      };
+
+      elapsed += DRAW_DURATION;
+    }
+  }
+
+  return timings;
+}
+
+function handDrawnCirclePath(
+    cx: number,
+    cy: number,
+    r: number,
+    seed: number
+) {
+  const points = 32;
+  const result: string[] = [];
+
+  const random = (n: number) => {
+    const x = Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+
+  for (let i = 0; i <= points; i++) {
+    const t = i / points;
+    const angle = t * Math.PI * 2;
+
+    const wobble =
+        (random(i + seed * 10) - 0.5) * 0.8 +
+        Math.sin(angle * 3 + seed) * 0.7 +
+        Math.sin(angle * 7 + seed * 2.3) * 0.3;
+
+    const radius = r + wobble;
+
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+
+    if (i === 0) {
+      result.push(`M ${x} ${y}`);
+    } else {
+      result.push(`L ${x} ${y}`);
+    }
+  }
+
+  return result.join(" ");
+}
+
 export function Board({boardSize = BOARD_SIZE}) {
   const cells = Array.from({ length: TOTAL_CELLS }, (_, i) => i);
+
+  const homeCells = Array.from(
+      { length: 4 * HOME_CELLS },
+      (_, i) => i
+  );
+
+  const timings = calculateDrawTimings( cells, boardSize );
 
   return (
     <svg viewBox={`0 0 ${boardSize} ${boardSize}`} style={{
@@ -88,30 +227,93 @@ export function Board({boardSize = BOARD_SIZE}) {
       height: "auto",
       display: "block"
     }}>
-      {/*<rect x={0} y={0} width={boardSize} height={boardSize} fill="white" />*/}
+      <defs>
+        <filter id="handDrawn">
+          <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.15"
+              numOctaves="2"
+              seed="3"
+              result="noise"
+          />
+
+        </filter>
+      </defs>
+
       {cells.map((i) => {
         const { x, y } = computeCoordsFromIndex({ index: i, boardSize });
+        const path = handDrawnCirclePath(
+            x,
+            y,
+            25,
+            i
+        );
+        const timing = timings[i];
+
         return (
-            <motion.g
-                key={i}
-                initial={{ opacity: 0, scale: 0, }}
-                animate={{ opacity: 1, scale: 1, }}
-                transition={{ delay: i * 0.02, type: "spring", stiffness: 400, damping: 20, }}
-                style={{ transformOrigin: `${x}px ${y}px`, }}>
-              <Circle r={20} cx={x} cy={y} fill="none" stroke="black" strokeWidth={4} />
-            </motion.g>
+          <motion.path
+              d={path}
+              fill="none"
+              stroke="#29251f"
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{
+                pathLength: 0,
+                opacity: 0,
+              }}
+              animate={{
+                pathLength: 1,
+                opacity: 0.9,
+              }}
+              transition={{ delay: timing.delay, duration: timing.duration}}
+          />
+        );
+      })}
+
+      {/* FOUR HOME PATHS */}
+      {homeCells.map((i) => {
+        const { x, y } = computeHomeCoords(
+            i,
+            boardSize
+        );
+
+        const team = Math.floor(i / HOME_CELLS);
+        const color = TEAM_COLORS[team];
+
+        const path = handDrawnCirclePath(
+            x,
+            y,
+            25,
+            1000 + i
+        );
+
+        return (
+            <motion.path
+                key={`home-${i}`}
+                d={path}
+                fill={color}
+                fillOpacity={0.22}
+                stroke={color}
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={{
+                  pathLength: 0,
+                  opacity: 0,
+                }}
+                animate={{
+                  pathLength: 1,
+                  opacity: 0.9,
+                }}
+                transition={{
+                  delay: i * 0.08,
+                  duration: 0.25,
+                  ease: "easeOut",
+                }}
+            />
         );
       })}
     </svg>
   );
 }
-// <Circle
-//   key={i}
-//   r={20}
-//   cx={x}
-//   cy={y}
-//   fill="none"
-//   stroke="black"
-//   strokeWidth={4}
-//   label={i + 1}
-// />

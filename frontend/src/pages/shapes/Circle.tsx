@@ -25,6 +25,8 @@ export function Circle({
 			stroke={stroke}
 			strokeWidth={strokeWidth}
 			fill={fill}
+			strokeLinecap="round"
+			strokeLinejoin="round"
 		/>
 	)
 }
