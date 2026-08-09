@@ -1,26 +1,16 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { CardTable } from "@/components/game/CardTable";
-import { usePlayerHand } from "@/hooks/usePlayerHand";
-import { useViewportSize } from "@/hooks/useViewportSize";
-import {Board} from "@/pages/game/Board";
+import { useRouter } from "next/router";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export default function Home() {
-  const viewportSize = useViewportSize();
-  const {
-    cardsInHand,
-    playedCards,
-    isPlayingCard,
-    isDeckEmpty,
-    playCard,
-    finishPlayingCard,
-    startNewDeckAndDealAgain,
-  } = usePlayerHand();
+
+  const router = useRouter();
 
   return (
     <main
@@ -31,40 +21,7 @@ export default function Home() {
           color: "#29251f", // Make the content feel printed onto the sheet
           position: "relative", overflow: "hidden", }}
     >
-      <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-
-            background: `
-        radial-gradient(
-          ellipse at center,
-          transparent 55%,
-          rgba(60, 45, 30, 0.035) 100%
-        )
-      `,
-          }}
-      />
-      <button onClick={startNewDeckAndDealAgain}>Nouveau paquet</button>
-
-      {isDeckEmpty && <h1>Deck is empty!</h1>}
-
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}>
-        <CardTable
-            cardsInHand={cardsInHand}
-            playedCards={playedCards}
-            isPlayingCard={isPlayingCard}
-            viewportSize={viewportSize}
-            onPlayCard={playCard}
-            onPlayedCardArrived={finishPlayingCard}
-        />
-        <Board />
-      </div>
+      <button onClick={() => router.push("/play")}>Play</button>
     </main>
   );
 }
