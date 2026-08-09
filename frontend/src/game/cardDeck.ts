@@ -1,10 +1,10 @@
 /**
- * A standard 52-card deck: creation, shuffling, drawing and card artwork.
- *
- * Decks are kept in a module-level registry so that a deck keeps its remaining
- * cards across React re-renders. Several independent decks can coexist, each
- * identified by a `deckId`.
+ * The cards themselves: creation, shuffling and artwork.
  */
+
+/* ************************************************************************** */
+/*                                 TYPE DEFS                                  */
+/* ************************************************************************** */
 
 export type CardRank =
   | "As" | "2" | "3" | "4" | "5" | "6" | "7"
@@ -14,10 +14,15 @@ export type CardSuit = "spade" | "heart" | "diamond" | "club";
 
 export type Card = { rank: CardRank; suit: CardSuit };
 
+/** Cards left to draw, topmost last. */
 export type Deck = Card[];
 
-/** Deck used when no explicit `deckId` is given. */
-export const DEFAULT_DECK_ID = 0;
+/* ************************************************************************** */
+/*                                 CONST DEFS                                 */
+/* ************************************************************************** */
+
+/** How many full 52-card sets are shuffled together into one deck. */
+const DECKS_NUMBER = 2;
 
 const ALL_CARD_RANKS: CardRank[] = [
   "As", "2", "3", "4", "5", "6", "7",
@@ -48,25 +53,24 @@ const SUIT_FRENCH_LABEL: Record<CardSuit, string> = {
   club: "trèfle",
 };
 
+/* ************************************************************************** */
+/*                                  ARTWORK                                   */
+/* ************************************************************************** */
+
 /** Path of the card's image inside `public/`. */
 export function getCardImagePath(card: Card): string {
   return `/card_${SUIT_IMAGE_TOKEN[card.suit]}_${RANK_IMAGE_NUMBER[card.rank]}.png`;
 }
 
-/** Human-readable name of the card, e.g. "As de pique". */
 export function getCardFrenchLabel(card: Card): string {
   return `${card.rank} de ${SUIT_FRENCH_LABEL[card.suit]}`;
 }
 
-/**
- * Stable identifier for a card. A deck holds at most one of each
- * rank/suit combination, so this uniquely identifies a card in play.
- */
-export function getCardId(card: Card): string {
-  return `${card.rank}-${card.suit}`;
-}
+/* ************************************************************************** */
+/*                                  DECK INIT                                 */
+/* ************************************************************************** */
 
-/** Fisher-Yates shuffle, in place. */
+/** Fisher-Yates shuffle */
 function shuffleDeckInPlace(deck: Deck): Deck {
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -75,28 +79,14 @@ function shuffleDeckInPlace(deck: Deck): Deck {
   return deck;
 }
 
-/** A fresh, shuffled 52-card deck. */
+/** DECKS_NUMBER full 52-card sets shuffled together, so ranks can repeat. */
 export function createShuffledDeck(): Deck {
   const deck: Deck = [];
-  for (const suit of ALL_CARD_SUITS) {
-    for (const rank of ALL_CARD_RANKS) deck.push({ rank, suit });
+
+  for (let set = 0; set < DECKS_NUMBER; set++) {
+    for (const suit of ALL_CARD_SUITS) {
+      for (const rank of ALL_CARD_RANKS) deck.push({ rank, suit });
+    }
   }
   return shuffleDeckInPlace(deck);
-}
-
-const remainingCardsByDeckId: Deck[] = [];
-
-function getOrCreateDeck(deckId: number): Deck {
-  remainingCardsByDeckId[deckId] ??= createShuffledDeck();
-  return remainingCardsByDeckId[deckId];
-}
-
-/** Takes the top card off the deck, or returns `null` once it is exhausted. */
-export function drawCardFromDeck(deckId: number = DEFAULT_DECK_ID): Card | null {
-  return getOrCreateDeck(deckId).pop() ?? null;
-}
-
-/** Replaces the deck with a fresh, shuffled one. */
-export function replaceDeckWithFreshOne(deckId: number = DEFAULT_DECK_ID): void {
-  remainingCardsByDeckId[deckId] = createShuffledDeck();
 }

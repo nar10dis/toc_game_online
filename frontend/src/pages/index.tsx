@@ -2,15 +2,13 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { CardTable } from "@/components/game/CardTable";
-import { usePlayerHand } from "@/hooks/usePlayerHand";
-import { useViewportSize } from "@/hooks/useViewportSize";
+import { CardTable } from "@/game/CardTable";
+import { usePlayerHand } from "@/game/usePlayerHand";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export default function Home() {
-  const viewportSize = useViewportSize();
   const {
     cardsInHand,
     playedCards,
@@ -34,7 +32,6 @@ export default function Home() {
         cardsInHand={cardsInHand}
         playedCards={playedCards}
         isPlayingCard={isPlayingCard}
-        viewportSize={viewportSize}
         onPlayCard={playCard}
         onPlayedCardArrived={finishPlayingCard}
       />
