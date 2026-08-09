@@ -53,6 +53,38 @@ function computeHomeCoords(
   };
 }
 
+const SPAWN_CELLS = 4;
+const SPAWN_SPACING = 70;
+const SPAWN_OFFSET = -180;
+
+function computeSpawnCoords(
+    spawnIndex: number,
+    boardSize = BOARD_SIZE
+) {
+  const g = geometry(boardSize);
+
+  const team = Math.floor(spawnIndex / SPAWN_CELLS);
+  const cell = spawnIndex % SPAWN_CELLS;
+
+  const scale = boardSize / BOARD_SIZE;
+
+  const spacing = SPAWN_SPACING * scale;
+  const offset = SPAWN_OFFSET * scale;
+
+  // Four cells centered around the middle of the arm.
+  const along =
+      (cell - (SPAWN_CELLS - 1) / 2) * spacing;
+
+  // Top spawn.
+  const local = {
+    x: g.c + along,
+    y: g.armY - offset,
+  };
+
+  // Rotate top → right → bottom → left.
+  return rotate(local, team, g.c);
+}
+
 // geometry, as fractions of the board so everything scales together
 const ARM_RADIUS = 350 / 1500;   // radius of the scallop
 const ARM_INSET = 90 / 1500;     // scallop centre's distance from the top edge
@@ -219,6 +251,11 @@ export function Board({boardSize = BOARD_SIZE}) {
       (_, i) => i
   );
 
+  const spawnCells = Array.from(
+      { length: 4 * SPAWN_CELLS },
+      (_, i) => i
+  );
+
   const timings = calculateDrawTimings( cells, boardSize );
 
   return (
@@ -294,6 +331,49 @@ export function Board({boardSize = BOARD_SIZE}) {
                 d={path}
                 fill={color}
                 fillOpacity={0.22}
+                stroke={color}
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={{
+                  pathLength: 0,
+                  opacity: 0,
+                }}
+                animate={{
+                  pathLength: 1,
+                  opacity: 0.9,
+                }}
+                transition={{
+                  delay: i * 0.08,
+                  duration: 0.25,
+                  ease: "easeOut",
+                }}
+            />
+        );
+      })}
+      {/* FOUR SPAWNS */}
+      {spawnCells.map((i) => {
+        const { x, y } = computeSpawnCoords(
+            i,
+            boardSize
+        );
+
+        const team = Math.floor(i / SPAWN_CELLS);
+        const color = TEAM_COLORS[team];
+
+        const path = handDrawnCirclePath(
+            x,
+            y,
+            25,
+            2000 + i
+        );
+
+        return (
+            <motion.path
+                key={`spawn-${i}`}
+                d={path}
+                fill={color}
+                fillOpacity={0.18}
                 stroke={color}
                 strokeWidth={5}
                 strokeLinecap="round"
