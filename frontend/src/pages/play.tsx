@@ -1,5 +1,9 @@
 import { CardTable } from "@/game/CardTable";
 import { usePlayerHand } from "@/game/usePlayerHand";
+import { getCardMoveDistance } from "@/game/cardDeck";
+import { PawnLayer } from "@/game/PawnLayer";
+import { PlayerAvatars } from "@/game/PlayerAvatars";
+import { usePawns } from "@/game/usePawns";
 
 import { Board } from "./game/Board";
 
@@ -13,6 +17,33 @@ export default function Play() {
     finishPlayingCard,
     startNewDeckAndDealAgain,
   } = usePlayerHand();
+
+  const {
+    pawns,
+    pendingMoveDistance,
+    selectablePawnIds,
+    playCardOnPawns,
+    choosePawn,
+    finishPawnMove,
+    resetPawns,
+  } = usePawns();
+
+  const isChoosingPawn = pendingMoveDistance > 0;
+
+  function handlePlayCard(tableId: number) {
+    const cardBeingPlayed = cardsInHand.find(
+      (handCard) => handCard.tableId === tableId,
+    );
+    if (!cardBeingPlayed) return;
+
+    playCard(tableId);
+    playCardOnPawns(getCardMoveDistance(cardBeingPlayed.card));
+  }
+
+  function handleNewDeck() {
+    startNewDeckAndDealAgain();
+    resetPawns();
+  }
 
   return (
     <main
@@ -37,9 +68,13 @@ export default function Play() {
       `,
           }}
       />
-      <button onClick={startNewDeckAndDealAgain}>Nouveau paquet</button>
+      <button onClick={handleNewDeck}>Nouveau paquet</button>
 
       {isDeckEmpty && <h1>Deck is empty!</h1>}
+
+      {isChoosingPawn && (
+        <h2>Choisis un pion à faire avancer de {pendingMoveDistance} cases</h2>
+      )}
 
       <div style={{
         display: "flex",
@@ -49,11 +84,21 @@ export default function Play() {
         <CardTable
             cardsInHand={cardsInHand}
             playedCards={playedCards}
-            isPlayingCard={isPlayingCard}
-            onPlayCard={playCard}
+            //the hand also waits while the player picks the pawn to move.
+            isPlayingCard={isPlayingCard || isChoosingPawn}
+            onPlayCard={handlePlayCard}
             onPlayedCardArrived={finishPlayingCard}
         />
-        <Board/>
+        <Board>
+          <PlayerAvatars />
+          <PawnLayer
+              pawns={pawns}
+              selectablePawnIds={selectablePawnIds}
+              moveDistance={pendingMoveDistance}
+              onPawnClick={choosePawn}
+              onPawnArrived={finishPawnMove}
+          />
+        </Board>
       </div>
     </main>
   );

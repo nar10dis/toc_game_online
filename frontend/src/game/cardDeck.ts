@@ -62,6 +62,11 @@ export function getCardImagePath(card: Card): string {
   return `/card_${SUIT_IMAGE_TOKEN[card.suit]}_${RANK_IMAGE_NUMBER[card.rank]}.png`;
 }
 
+/** How many cells the card moves a pawn: 1 for the ace, up to 13 for the king. */
+export function getCardMoveDistance(card: Card): number {
+  return RANK_IMAGE_NUMBER[card.rank];
+}
+
 export function getCardFrenchLabel(card: Card): string {
   return `${card.rank} de ${SUIT_FRENCH_LABEL[card.suit]}`;
 }
