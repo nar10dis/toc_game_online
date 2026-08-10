@@ -1,10 +1,9 @@
-import { CardTable } from "@/components/game/CardTable";
-import { usePlayerHand } from "@/hooks/usePlayerHand";
-import { useViewportSize } from "@/hooks/useViewportSize";
+import { CardTable } from "@/game/CardTable";
+import { usePlayerHand } from "@/game/usePlayerHand";
+
 import { Board } from "./game/Board";
 
 export default function Play() {
-  const viewportSize = useViewportSize();
   const {
     cardsInHand,
     playedCards,
@@ -51,7 +50,6 @@ export default function Play() {
             cardsInHand={cardsInHand}
             playedCards={playedCards}
             isPlayingCard={isPlayingCard}
-            viewportSize={viewportSize}
             onPlayCard={playCard}
             onPlayedCardArrived={finishPlayingCard}
         />
