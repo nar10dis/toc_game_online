@@ -9,7 +9,13 @@ import { MAX_CARDS_IN_HAND, pickRandomPlayedCardTilt } from "@/game/cardLayout";
 
 export type CardOnTable = {
   card: Card;
-  tableId: string;
+  /**
+   * Identity of the card for as long as it stays on the table, and also the
+   * rank at which it was put there. Cards are drawn on screen in this order,
+   * hand and pile alike, so playing a card never moves it among its siblings
+   * and React keeps its element alive — see `CardTable`.
+   */
+  tableId: number;
 };
 
 export type PlayedCard = CardOnTable & {
@@ -21,8 +27,8 @@ export type PlayerHandState = {
   playedCards: PlayedCard[];
   isPlayingCard: boolean;
   isDeckEmpty: boolean;
-  playCard: (tableId: string) => void;
-  finishPlayingCard: (tableId: string) => void;
+  playCard: (tableId: number) => void;
+  finishPlayingCard: (tableId: number) => void;
   startNewDeckAndDealAgain: () => void;
 };
 
@@ -38,7 +44,7 @@ export function usePlayerHand(): PlayerHandState {
   const [isDeckEmpty, setIsDeckEmpty] = useState(false);
 
   const deckRef = useRef<Deck | null>(null);
-  const inFlightTableId = useRef<string | null>(null);
+  const inFlightTableId = useRef<number | null>(null);
   //mirrors cardsInHand, so animation callbacks read the hand of *now*.
   const handRef = useRef<CardOnTable[]>([]);
   //cards are identified by a basic incremental id
@@ -64,7 +70,7 @@ export function usePlayerHand(): PlayerHandState {
           break;
         }
         cardsPutOnTable.current += 1;
-        hand.push({ card: drawnCard, tableId: `card-${cardsPutOnTable.current}` });
+        hand.push({ card: drawnCard, tableId: cardsPutOnTable.current });
       }
 
       setHand(hand);
@@ -83,7 +89,7 @@ export function usePlayerHand(): PlayerHandState {
   }, [refillHand]);
 
   const playCard = useCallback(
-    (tableId: string) => {
+    (tableId: number) => {
       //one card travels at a time, so each draw stays paired with its play.
       if (inFlightTableId.current !== null) return;
 
@@ -107,7 +113,7 @@ export function usePlayerHand(): PlayerHandState {
   );
 
   const finishPlayingCard = useCallback(
-    (tableId: string) => {
+    (tableId: number) => {
       //only the card in flight ends a play. This also rejects a pile card
       //settling after a resize, and the exit of a card wiped by a new deck.
       if (inFlightTableId.current !== tableId) return;
