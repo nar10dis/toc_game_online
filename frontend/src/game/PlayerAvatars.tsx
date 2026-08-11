@@ -1,0 +1,152 @@
+import { motion } from "motion/react";
+import { Princess_Sofia } from "next/font/google";
+
+import {
+  BOARD_SIZE,
+  TEAM_COLORS,
+  TEAMS_NUMBER,
+  computeAvatarCoords,
+} from "@/game/boardGeometry";
+import { handDrawnCirclePath } from "@/game/handDrawn";
+
+/* ************************************************************************** */
+/*                                 CONST DEF                                  */
+/* ************************************************************************** */
+
+/** Team whose picture is left out: the player sits there, next to the cards. */
+const BOTTOM_TEAM = 2;
+
+const AVATAR_RADIUS = 78;
+
+/** The drawings are 596 x 753, and this keeps that shape. */
+const PICTURE_HEIGHT = 210;
+const PICTURE_WIDTH = 166;
+
+/** One drawing per team, in team order. */
+const TEAM_PICTURES = [
+  "/heart_demon.png",
+  "/spade_demon.png",
+  "/diamon_demon.png",
+  "/club_demon.png",
+];
+
+/** Turns the black ink white and the white paper black, for the mask below. */
+const INVERT_INK_FILTER = "invert-ink";
+
+/** Handwriting for the names, to go with the drawn board. */
+const nameFont = Princess_Sofia({ weight: "400", subsets: ["latin"] });
+
+const NAME_FONT_SIZE = 42;
+/** Gap between the top of the picture and the baseline of the name. */
+const NAME_GAP = 12;
+
+const DEFAULT_PLAYER_NAMES = ["Player 1", "Player 2", "Player 3"];
+
+/* ************************************************************************** */
+/*                                 REACT FUNC                                 */
+/* ************************************************************************** */
+
+type PlayerAvatarsProps = {
+  /** Its picture is not drawn — that player is the one holding the cards. */
+  playerTeam?: number;
+  /** Names of the other players, in the order they sit around the board. */
+  playerNames?: string[];
+  /** Must match the `boardSize` of the `Board` these are drawn in. */
+  boardSize?: number;
+};
+
+/** The other players' pictures, next to their spawn zone. Goes inside a `Board`. */
+export function PlayerAvatars({
+  playerTeam = BOTTOM_TEAM,
+  playerNames = DEFAULT_PLAYER_NAMES,
+  boardSize = BOARD_SIZE,
+}: PlayerAvatarsProps) {
+  const allTeams = Array.from({ length: TEAMS_NUMBER }, (_, team) => team);
+  const shownTeams = allTeams.filter((team) => team !== playerTeam);
+
+  return (
+    <g>
+      <defs>
+        <filter id={INVERT_INK_FILTER} colorInterpolationFilters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0"
+          />
+        </filter>
+
+        {shownTeams.map((team) => {
+          const { x, y } = computeAvatarCoords(team, boardSize);
+
+          //a mask keeps what is white, so the inverted ink shows through and
+          //the paper around the drawing disappears.
+          return (
+            <mask
+              key={`picture-mask-${team}`}
+              id={`picture-mask-${team}`}
+              maskUnits="userSpaceOnUse"
+              x={x - PICTURE_WIDTH / 2}
+              y={y - PICTURE_HEIGHT / 2}
+              width={PICTURE_WIDTH}
+              height={PICTURE_HEIGHT}
+            >
+              <image
+                href={TEAM_PICTURES[team]}
+                x={x - PICTURE_WIDTH / 2}
+                y={y - PICTURE_HEIGHT / 2}
+                width={PICTURE_WIDTH}
+                height={PICTURE_HEIGHT}
+                preserveAspectRatio="xMidYMid meet"
+                filter={`url(#${INVERT_INK_FILTER})`}
+              />
+            </mask>
+          );
+        })}
+      </defs>
+
+      {shownTeams.map((team, seat) => {
+        const { x, y } = computeAvatarCoords(team, boardSize);
+        const color = TEAM_COLORS[team];
+
+        return (
+          <motion.g
+            key={`avatar-${team}`}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 + team * 0.1, duration: 0.3 }}
+          >
+            <text
+              className={nameFont.className}
+              x={x}
+              y={y - AVATAR_RADIUS - NAME_GAP}
+              textAnchor="middle"
+              fill={color}
+              fontSize={NAME_FONT_SIZE}
+            >
+              {playerNames[seat]}
+            </text>
+
+            <path
+              d={handDrawnCirclePath(x, y, AVATAR_RADIUS, 5000 + team)}
+              fill={color}
+              fillOpacity={0.14}
+              stroke={color}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* the drawing itself, painted in the team colour through its mask */}
+            <rect
+              x={x - PICTURE_WIDTH / 2}
+              y={y - PICTURE_HEIGHT / 2}
+              width={PICTURE_WIDTH}
+              height={PICTURE_HEIGHT}
+              fill={color}
+              mask={`url(#picture-mask-${team})`}
+            />
+          </motion.g>
+        );
+      })}
+    </g>
+  );
+}
