@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDTO } from './dto/register.dto';
-import { UnauthorizedExeception } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 
 @Injectable()
 export class AuthService {
-    constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
     async register(data: RegisterDTO)
     {
@@ -34,9 +35,13 @@ export class AuthService {
         });
 
         if (!user)
-            throw new UnauthorizedExeception();
+            throw new UnauthorizedException();
         const password_comp = await bcrypt.compare(data.password, user.password);
         if (!password_comp)
-            throw new UnauthorizedExeception();
+            throw new UnauthorizedException();
+        const payload = { sub: user.id, username: user.name };
+        return {
+            access_token: await this.jwtService.signAsync(payload),
+        };
     }
 }
