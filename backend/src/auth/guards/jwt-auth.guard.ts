@@ -3,17 +3,21 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express'
 
 @Injectable()
-export class JwtGuard implements CanActivate {
+export class AuthGuard implements CanActivate {
     constructor(private readonly jwtService: JwtService) {}
 
-    async canActivate(context: ExecutionContext,): Promise<boolean> {
-        const request = context.switchtoHttp().getRequest();
-        const token = request.cookies['jwt'];
+    canActivate(context: ExecutionContext,): boolean | Promise<boolean> {
+        const req = context.switchToHttp().getRequest();
+        const token = req.cookies['jwt'];
         if (!token)
             throw new UnauthorizedException();
         try {
-            request.user = this.jwtService.verify(token);
+            req.user = this.jwtService.verify(token);
         }
+        catch {
+            throw new UnauthorizedException("Guard problem");
+        }
+        return true;
     }
     
 }
