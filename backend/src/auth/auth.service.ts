@@ -33,15 +33,50 @@ export class AuthService {
                 email: data.email,
             }
         });
-
         if (!user)
             throw new UnauthorizedException();
+        
         const password_comp = await bcrypt.compare(data.password, user.password);
         if (!password_comp)
             throw new UnauthorizedException();
+        
         const payload = { sub: user.id, username: user.name };
+        const access_token = await this.jwtService.signAsync(payload);
+        
+        const refresh_token = await this.jwtService.signAsync(payload, {
+            secret: process.env.JWT_REFRESH_SECRET,
+            expiresIn: '7d'
+        });
+        
+        const hash_refresh_token = await bcrypt.hash(refresh_token, 10);
+        await this.prisma.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                hashedRefreshToken: hash_refresh_token,
+            },
+        });
+
         return {
-            access_token: await this.jwtService.signAsync(payload),
+            access_token, refresh_token,
         };
+    }
+
+    async refresh(refreshToken: string)
+    {
+        let payload;
+        try {
+            payload = await this.jwtService.verifyAsync(refreshToken, {
+                secret: process.env.JWT_REFRESH_SECRET,
+            });
+        }
+        catch {
+            throw new UnauthorizedException();
+        }
+
+        const user = await this.prisma.user.findUnique({where: { id: payload.sub},});
+
+        
     }
 }

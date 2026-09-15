@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDTO } from './dto/register.dto';
 import { AuthGuard } from './guards/jwt-auth.guard';
@@ -8,31 +8,65 @@ import type { Response, Request } from 'express';
 export class AuthController {
     constructor(private authService: AuthService) {}
 
-
     @Post('register')
-    register(@Body() dto: RegisterDTO)
+    async register(@Body() dto: RegisterDTO)
     {
-        return this.authService.register(dto);
+        await this.authService.register(dto);
+        return { message: 'Registered <3' };
     }
+
     @Post('login')
     async login(@Body() data: { email: string; password: string; }, @Res({ passthrough: true }) res: Response)
     {
-        const { access_token } = await this.authService.login(data);
+        const { access_token, refresh_token } = await this.authService.login(data);
+        
         res.cookie('jwt', access_token, {
             httpOnly: true,
             secure: true,
             sameSite: 'strict',
-        }
-        )
-        return { message: 'Connecte' };
+        })
+
+        res.cookie('refresh_token', refresh_token, {
+            httpOnly: true,
+            secure: true, 
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        })
+        return { message: 'Connecte' }; 
     }
 
-    @Get('me')
-    @UseGuards(AuthGuard)
-    getProfile(@Req() req: Request & { user: any })
+
+    @Post('refresh')
+    async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) 
     {
-        return req.user;
+        const oldRefreshToken = req.cookies['refresh_token'];
+
+        if(!oldRefreshToken)
+                throw new UnauthorizedException();
+
+        const { access_token, refresh_token } = await this.authService.refresh(oldRefreshToken);
+        res.cookie('jwt', access_token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict',
+        });
+
+        res.cookie('refresh_token', refresh_token, {
+            httpOnly: true,
+            secure: true, 
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        return { message: 'Your token is fresh' };
     }
+
+    @UseGuards(AuthGuard)
+    @Post('logout')
+    logout()
+    {
+        return { message: 'Successfully logout'};
+    }
+    
 
      
 }
