@@ -1,5 +1,4 @@
 import { motion } from "motion/react";
-import { Princess_Sofia } from "next/font/google";
 
 import {
   BOARD_SIZE,
@@ -33,10 +32,11 @@ const TEAM_PICTURES = [
 /** Turns the black ink white and the white paper black, for the mask below. */
 const INVERT_INK_FILTER = "invert-ink";
 
-/** Handwriting for the names, to go with the drawn board. */
-const nameFont = Princess_Sofia({ weight: "400", subsets: ["latin"] });
-
-const NAME_FONT_SIZE = 42;
+/**
+ * In board units, so the name scales with the board. At the usual board width
+ * (90vmin on a laptop screen) this lands on the site's --text-2xl.
+ */
+const NAME_FONT_SIZE = 50;
 /** Gap between the top of the picture and the baseline of the name. */
 const NAME_GAP = 12;
 
@@ -115,7 +115,7 @@ export function PlayerAvatars({
             transition={{ delay: 0.4 + team * 0.1, duration: 0.3 }}
           >
             <text
-              className={nameFont.className}
+              className="font-heading font-bold"
               x={x}
               y={y - AVATAR_RADIUS - NAME_GAP}
               textAnchor="middle"

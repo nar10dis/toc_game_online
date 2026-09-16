@@ -2,8 +2,9 @@
  * Where every card sits on screen, and how it travels there.
  *
  * Pure geometry: no React. Every position is absolute, in pixels, measured
- * from the top-left corner of the viewport — the cards are rendered as
- * `position: fixed` elements at (0, 0) and moved with a transform.
+ * from the top-left corner of the table — the area laid over the board. The
+ * cards are `position: absolute` elements at (0, 0) moved with a transform, so
+ * they scroll and zoom together with the board.
  */
 
 import type { Transition } from "motion/react";
@@ -12,7 +13,7 @@ import type { Transition } from "motion/react";
 /*                                  TYPE DEF                                  */
 /* ************************************************************************** */
 
-export type ViewportSize = { width: number; height: number };
+export type TableSize = { width: number; height: number };
 
 /** Placement of a single card on screen. */
 export type CardTransform = {
@@ -45,6 +46,8 @@ const PLAYED_CARD_SCALE = 1.15;
 const PLAYED_CARD_MAX_TILT = 5;
 /** How far below the screen a leaving card flies before it is unmounted. */
 const OFF_SCREEN_DISTANCE_IN_PIXELS = 300;
+/** Height of a card of the hand, as a share of the board height. */
+const CARD_HEIGHT_SHARE_OF_TABLE = 0.12;
 
 /* ************************************************************************** */
 /*                                TRANSITIONS                                 */
@@ -73,32 +76,40 @@ export const CLEAR_TABLE_FALL: Transition = {
 /*                               GEOMETRY FUNC                                */
 /* ************************************************************************** */
 
-function getHorizontallyCenteredCardX(viewportSize: ViewportSize): number {
-  return viewportSize.width / 2 - CARD_WIDTH_IN_PIXELS / 2;
+// the cards follow the board size, so both grow and shrink together on zoom.
+export function getCardScale(tableSize: TableSize): number {
+  const cardHeight = tableSize.height * CARD_HEIGHT_SHARE_OF_TABLE;
+  return cardHeight / CARD_HEIGHT_IN_PIXELS;
+}
+
+function getHorizontallyCenteredCardX(tableSize: TableSize): number {
+  return tableSize.width / 2 - CARD_WIDTH_IN_PIXELS / 2;
 }
 
 export function getHandCardTransform(
   positionInHand: number,
   totalCardsInHand: number,
-  viewportSize: ViewportSize,
+  tableSize: TableSize,
 ): CardTransform {
   //normalize number from the center of the hand !
   const slotOffsetFromCenter = positionInHand - (totalCardsInHand - 1) / 2;
+  const cardScale = getCardScale(tableSize);
 
   return {
     //calcule l'ecartement gauche - droite
     x:
-      getHorizontallyCenteredCardX(viewportSize) +
-      slotOffsetFromCenter * HAND_HORIZONTAL_SPREAD_IN_PIXELS,
+      getHorizontallyCenteredCardX(tableSize) +
+      slotOffsetFromCenter * HAND_HORIZONTAL_SPREAD_IN_PIXELS * cardScale,
     //calcule chute en arc + inclinaison.
     //abs sur le normalized sinon on a diagonale.
+    //the card scales from its bottom edge, so only the margin and drop shrink.
     y:
-      viewportSize.height -
+      tableSize.height -
       CARD_HEIGHT_IN_PIXELS -
-      HAND_BOTTOM_MARGIN_IN_PIXELS +
-      Math.abs(slotOffsetFromCenter) * HAND_ARC_DROP_IN_PIXELS,
+      HAND_BOTTOM_MARGIN_IN_PIXELS * cardScale +
+      Math.abs(slotOffsetFromCenter) * HAND_ARC_DROP_IN_PIXELS * cardScale,
     rotate: slotOffsetFromCenter * HAND_TILT_IN_DEGREES,
-    scale: 1,
+    scale: cardScale,
   };
 }
 
@@ -108,14 +119,18 @@ export function pickRandomPlayedCardTilt(): number {
 }
 
 export function getPlayedCardTransform(
-  viewportSize: ViewportSize,
+  tableSize: TableSize,
   tiltInDegrees: number,
 ): CardTransform {
+  const scale = PLAYED_CARD_SCALE * getCardScale(tableSize);
+  const scaledCardHeight = CARD_HEIGHT_IN_PIXELS * scale;
+
+  //the card scales from its bottom edge: place that edge so its middle sits mid-screen.
   return {
-    x: getHorizontallyCenteredCardX(viewportSize),
-    y: viewportSize.height / 2 - CARD_HEIGHT_IN_PIXELS / 2,
+    x: getHorizontallyCenteredCardX(tableSize),
+    y: tableSize.height / 2 + scaledCardHeight / 2 - CARD_HEIGHT_IN_PIXELS,
     rotate: tiltInDegrees,
-    scale: PLAYED_CARD_SCALE,
+    scale,
   };
 }
 
@@ -128,6 +143,6 @@ export const DEAL_IN_START_TRANSFORM: CardTransform = {
 };
 
 /** Vertical position a card slides down to when it leaves the table. */
-export function getCardOffScreenY(viewportSize: ViewportSize): number {
-  return viewportSize.height + OFF_SCREEN_DISTANCE_IN_PIXELS;
+export function getCardOffScreenY(tableSize: TableSize): number {
+  return tableSize.height + OFF_SCREEN_DISTANCE_IN_PIXELS;
 }

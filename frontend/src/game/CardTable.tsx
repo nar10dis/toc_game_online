@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, type Transition } from "motion/react";
 
@@ -15,7 +15,7 @@ import {
   getHandCardTransform,
   getPlayedCardTransform,
   type CardTransform,
-  type ViewportSize,
+  type TableSize,
 } from "@/game/cardLayout";
 import type { CardOnTable, PlayedCard } from "@/game/usePlayerHand";
 
@@ -27,26 +27,29 @@ import type { CardOnTable, PlayedCard } from "@/game/usePlayerHand";
 const BOTTOM_OF_PILE_STACKING_ORDER = 100;
 
 /* ************************************************************************** */
-/*                                  VIEWPORT                                  */
+/*                                 TABLE SIZE                                 */
 /* ************************************************************************** */
 
-/** Size of the window, kept in sync on resize. 0x0 until the first client render. */
-function useViewportSize(): ViewportSize {
-  const [viewportSize, setViewportSize] = useState<ViewportSize>({
+/** Size of the table element, kept in sync when it resizes. 0x0 until measured. */
+function useTableSize(tableRef: RefObject<HTMLDivElement | null>): TableSize {
+  const [tableSize, setTableSize] = useState<TableSize>({
     width: 0,
     height: 0,
   });
 
   useEffect(() => {
-    const updateViewportSize = () =>
-      setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+    const table = tableRef.current;
+    if (!table) return;
 
-    updateViewportSize();
-    window.addEventListener("resize", updateViewportSize);
-    return () => window.removeEventListener("resize", updateViewportSize);
-  }, []);
+    //the table follows the board, which resizes on zoom without a window resize.
+    const observer = new ResizeObserver(() => {
+      setTableSize({ width: table.clientWidth, height: table.clientHeight });
+    });
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [tableRef]);
 
-  return viewportSize;
+  return tableSize;
 }
 
 /* ************************************************************************** */
@@ -90,13 +93,15 @@ function SingleCard({
     <motion.div
       onClick={onPlay ?? undefined}
       style={{
-        position: "fixed",
+        position: "absolute",
         top: 0,
         left: 0,
         width: CARD_WIDTH_IN_PIXELS,
         height: CARD_HEIGHT_IN_PIXELS,
         transformOrigin: "bottom center",
         cursor: isPlayable ? "pointer" : "default",
+        //the table lets clicks through to the pawns, the cards take them back.
+        pointerEvents: "auto",
         zIndex: stackingOrder,
       }}
       initial={{ ...DEAL_IN_START_TRANSFORM, opacity: 0 }}
@@ -145,7 +150,7 @@ type CardTableProps = {
   onPlayedCardArrived: (tableId: number) => void;
 };
 
-/** Everything on screen: the hand the player holds, and the pile of played cards. */
+/** Laid over the board: the hand the player holds, and the pile of played cards. */
 export function CardTable({
   cardsInHand,
   playedCards,
@@ -153,13 +158,23 @@ export function CardTable({
   onPlayCard,
   onPlayedCardArrived,
 }: CardTableProps) {
-  const viewportSize = useViewportSize();
+  const tableRef = useRef<HTMLDivElement>(null);
+  const tableSize = useTableSize(tableRef);
 
-  //the viewport is unknown until the first client render; painting before then
+  //the table is laid over the board and fills it; the cards are placed inside.
+  const tableStyle = {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+  } as const;
+
+  //the table size is unknown until it is measured; painting before then
   //would put every card in the top-left corner for one frame.
-  if (viewportSize.width === 0) return null;
+  if (tableSize.width === 0) {
+    return <div ref={tableRef} style={tableStyle} />;
+  }
 
-  const offScreenY = getCardOffScreenY(viewportSize);
+  const offScreenY = getCardOffScreenY(tableSize);
   const topOfPile = playedCards[playedCards.length - 1] ?? null;
 
   //hand and pile go in ONE flat list: a played card must stay the very same
@@ -171,7 +186,7 @@ export function CardTable({
       targetTransform: getHandCardTransform(
         positionInHand,
         cardsInHand.length,
-        viewportSize,
+        tableSize,
       ),
       stackingOrder: positionInHand,
       movementTransition: HAND_CARD_MOVEMENT,
@@ -185,7 +200,7 @@ export function CardTable({
   playedCards.forEach((playedCard, positionInPile) => {
     cardsOnTable.push({
       cardOnTable: playedCard,
-      targetTransform: getPlayedCardTransform(viewportSize, playedCard.tiltInDegrees),
+      targetTransform: getPlayedCardTransform(tableSize, playedCard.tiltInDegrees),
       stackingOrder: BOTTOM_OF_PILE_STACKING_ORDER + positionInPile,
       movementTransition: PLAYED_CARD_TRAVEL,
       onPlay: null,
@@ -208,28 +223,30 @@ export function CardTable({
   );
 
   return (
-    <AnimatePresence>
-      {cardsOnTable.map(
-        ({
-          cardOnTable,
-          targetTransform,
-          stackingOrder,
-          movementTransition,
-          onPlay,
-          onArrived,
-        }) => (
-          <SingleCard
-            key={cardOnTable.tableId}
-            card={cardOnTable.card}
-            targetTransform={targetTransform}
-            stackingOrder={stackingOrder}
-            movementTransition={movementTransition}
-            offScreenY={offScreenY}
-            onPlay={onPlay}
-            onArrived={onArrived}
-          />
-        ),
-      )}
-    </AnimatePresence>
+    <div ref={tableRef} style={tableStyle}>
+      <AnimatePresence>
+        {cardsOnTable.map(
+          ({
+            cardOnTable,
+            targetTransform,
+            stackingOrder,
+            movementTransition,
+            onPlay,
+            onArrived,
+          }) => (
+            <SingleCard
+              key={cardOnTable.tableId}
+              card={cardOnTable.card}
+              targetTransform={targetTransform}
+              stackingOrder={stackingOrder}
+              movementTransition={movementTransition}
+              offScreenY={offScreenY}
+              onPlay={onPlay}
+              onArrived={onArrived}
+            />
+          ),
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
