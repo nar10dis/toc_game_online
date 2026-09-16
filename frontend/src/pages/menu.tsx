@@ -3,8 +3,8 @@
 import { FlaskConicalIcon, HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useRouter } from "next/router";
 
-import { PageLayout } from "@/components/PageLayout";
-import { Title, Subtitle } from "@/components/Title";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useUsername } from "@/lib/user";

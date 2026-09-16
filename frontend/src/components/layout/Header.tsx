@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 import { Button } from "@/components/ui/button";
+import { isLogged } from "@/lib/user";
 
 export function Header() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export function Header() {
   return (
     <header className="flex items-center justify-between border-b border-border px-6 py-4">
       <Link
-        href="/"
+        href={isLogged ? "/menu" : "/login"}
         className="flex items-center gap-3 text-foreground transition-opacity hover:opacity-70"
       >
         <span

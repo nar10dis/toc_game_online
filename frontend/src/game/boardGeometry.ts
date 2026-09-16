@@ -99,7 +99,7 @@ function geometry(boardSize: number) {
   const ox = mx - (sagitta * (mx - c)) / len;
   const oy = my - (sagitta * (my - c)) / len;
 
-  let start = deg(Math.atan2(p.y - oy, p.x - ox));
+  const start = deg(Math.atan2(p.y - oy, p.x - ox));
   let end = deg(Math.atan2(q.y - oy, q.x - ox));
   while (end - start > 180) end -= 360;
   while (end - start < -180) end += 360;

@@ -1,9 +1,10 @@
+import Link from "next/link"
+
 import { cn } from "@/lib/utils"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
@@ -27,27 +28,24 @@ export function LoginForm({
           <Input id="email" type="email" placeholder="m@example.com" required />
         </Field>
         <Field>
-          <div className="flex items-center">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a
-              href="#"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-            >
-              Forgot your password?
-            </a>
-          </div>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
           <Input id="password" type="password" required />
         </Field>
         <Field>
           <Button type="submit">Login</Button>
+          {/* TODO: remove once the login works, it lets us reach the game without an account */}
+          <Link href="/menu" className={buttonVariants({ variant: "outline" })}>
+            Test game
+          </Link>
         </Field>
         <Field>
-          <FieldDescription className="text-center">
+          <Link
+            href="/register"
+            className="text-center text-sm text-muted-foreground transition-colors hover:text-primary"
+          >
             Don&apos;t have an account?{" "}
-            <a href="/register" className="underline underline-offset-4">
-              Sign up
-            </a>
-          </FieldDescription>
+            <span className="underline underline-offset-4">Sign up</span>
+          </Link>
         </Field>
       </FieldGroup>
     </form>

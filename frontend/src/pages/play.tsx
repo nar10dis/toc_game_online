@@ -4,7 +4,7 @@ import { getCardMoveDistance } from "@/game/cardDeck";
 import { PawnLayer } from "@/game/PawnLayer";
 import { PlayerAvatars } from "@/game/PlayerAvatars";
 import { usePawns } from "@/game/usePawns";
-import { Header } from "@/components/Header";
+import { Header } from "@/components/layout/Header";
 import { paperStyle } from "@/lib/paperStyle";
 
 import { Board } from "@/components/game/Board";

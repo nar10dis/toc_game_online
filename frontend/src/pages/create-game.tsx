@@ -1,5 +1,5 @@
-import { PageLayout } from "@/components/PageLayout";
-import { Title, Subtitle } from "@/components/Title";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { Title, Subtitle } from "@/components/layout/Title";
 
 export default function CreateGame() {
   return (

@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
@@ -72,9 +74,13 @@ export function RegisterForm({
           <Button type="submit">Create Account</Button>
         </Field>
         <Field>
-          <FieldDescription className="px-6 text-center">
-            Already have an account? <a href="/login">Sign in</a>
-          </FieldDescription>
+          <Link
+            href="/login"
+            className="text-center text-sm text-muted-foreground transition-colors hover:text-primary"
+          >
+            Already have an account?{" "}
+            <span className="underline underline-offset-4">Sign in</span>
+          </Link>
         </Field>
       </FieldGroup>
     </form>

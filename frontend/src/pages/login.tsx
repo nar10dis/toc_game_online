@@ -1,16 +1,32 @@
-import { Header } from "@/components/Header"
-import { paperStyle } from "@/lib/paperStyle"
-import { LoginForm } from "@/components/login-form"
+import { PageLayout } from "@/components/layout/PageLayout";
+import { Title } from "@/components/layout/Title";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { DemonCircle } from "@/components/demons/DemonCircle";
 
-export default function Page() {
+const welcomePhrases = [
+  "Toc toc toc ! Qui est là ?",
+  "Jouer au toc pour pas finir toqué",
+  "Ready to play the best game ever?",
+  "Welcome to TocGameOnline.com",
+];
+
+// Picked on the server so the browser shows the same phrase without a flash
+export function getServerSideProps() {
+  const randomIndex = Math.floor(Math.random() * welcomePhrases.length);
+  return { props: { welcomePhrase: welcomePhrases[randomIndex] } };
+}
+
+export default function LoginPage({ welcomePhrase }: { welcomePhrase: string }) {
   return (
-    <div className="flex min-h-svh w-full flex-col" style={paperStyle}>
-      <Header />
-      <div className="flex flex-1 items-center justify-center p-6 md:p-10">
-        <div className="w-full max-w-sm">
-          <LoginForm />
+    <PageLayout>
+      <DemonCircle>
+        <div className="flex flex-col items-center gap-8">
+          <Title>{welcomePhrase}</Title>
+          <div className="w-96 max-w-full">
+            <LoginForm />
+          </div>
         </div>
-      </div>
-    </div>
-  )
+      </DemonCircle>
+    </PageLayout>
+  );
 }
