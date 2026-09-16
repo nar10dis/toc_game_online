@@ -3,6 +3,7 @@
 import { FlaskConicalIcon, HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useRouter } from "next/router";
 
+import { DemonCampfire } from "@/components/demons/DemonCampfire";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,11 @@ export default function Menu() {
           <p className="mt-4 font-body text-lg text-muted-foreground md:text-xl">Ready to play ?</p>
         </div>
 
-        <div className="mt-16 text-center">
+        <div className="mt-8">
+          <DemonCampfire />
+        </div>
+
+        <div className="mt-16 text-center md:mt-4">
           <Title>Game menu</Title>
           <Subtitle>Start a table of your own, or sit at someone else&apos;s.</Subtitle>
         </div>

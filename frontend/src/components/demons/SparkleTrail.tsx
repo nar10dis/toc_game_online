@@ -1,62 +1,51 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import type { MotionValue } from "motion/react";
 import { Sparkle } from "lucide-react";
 
-import { pointOnCircle } from "@/lib/pointOnCircle";
+import { randomBetween } from "@/lib/randomBetween";
 
 // One sparkle per demon every 300ms, each living 1.6s: about 5 sparkles behind a demon
 const newSparkleEveryMs = 300;
 const sparkleLifetimeMs = 1600;
-// Sparkles start a little behind the demon, otherwise the drawing hides them
-const degreesBehindDemon = 8;
-// How far a sparkle can land from the circle path, in px
-const maxDistanceFromPath = 22;
 
-type SparkleData = {
-  id: number;
+/** Where a new sparkle appears, in px from the trail container. `zIndex` and `opacity` let it go behind things. */
+export type SparkleSpot = {
   x: number;
   y: number;
+  zIndex?: number;
+  opacity?: number;
+};
+
+type SparkleData = SparkleSpot & {
+  id: number;
   size: number;
   createdAt: number;
 };
 
-function randomBetween(min: number, max: number) {
-  return min + Math.random() * (max - min);
-}
-
-/** Small twinkling stars left behind each demon turning on the circle. */
-export function SparkleTrail({
-  radius,
-  rotation,
-  demonCount,
-}: {
-  radius: number;
-  rotation: MotionValue<number>;
-  demonCount: number;
-}) {
+/** Small twinkling stars left behind the demons. `getSpots` gives one spot per demon, read every 300ms. */
+export function SparkleTrail({ getSpots }: { getSpots: () => SparkleSpot[] }) {
   const [sparkles, setSparkles] = useState<SparkleData[]>([]);
   const nextId = useRef(0);
+  // Kept in a ref so a new function on each render does not restart the timer
+  const getSpotsRef = useRef(getSpots);
+
+  useEffect(() => {
+    getSpotsRef.current = getSpots;
+  }, [getSpots]);
 
   useEffect(() => {
     function addSparkles() {
       const now = Date.now();
-      const newSparkles: SparkleData[] = [];
-
-      for (let index = 0; index < demonCount; index++) {
-        const demonAngle = rotation.get() + (index / demonCount) * 360;
-        const distanceFromCenter = radius + randomBetween(-maxDistanceFromPath, maxDistanceFromPath);
-        const position = pointOnCircle(demonAngle - degreesBehindDemon, distanceFromCenter);
-
-        newSparkles.push({
+      const newSparkles = getSpotsRef.current().map((spot) => {
+        const sparkle: SparkleData = {
+          ...spot,
           id: nextId.current,
-          x: position.x,
-          y: position.y,
           size: randomBetween(8, 14),
           createdAt: now,
-        });
+        };
         nextId.current++;
-      }
+        return sparkle;
+      });
 
       setSparkles((currentSparkles) => {
         const aliveSparkles = currentSparkles.filter((sparkle) => now - sparkle.createdAt < sparkleLifetimeMs);
@@ -66,7 +55,7 @@ export function SparkleTrail({
 
     const timer = setInterval(addSparkles, newSparkleEveryMs);
     return () => clearInterval(timer);
-  }, [radius, rotation, demonCount]);
+  }, []);
 
   return (
     <div className="pointer-events-none absolute top-1/2 left-1/2">
@@ -74,7 +63,7 @@ export function SparkleTrail({
         <div
           key={sparkle.id}
           className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: sparkle.x, top: sparkle.y }}
+          style={{ left: sparkle.x, top: sparkle.y, zIndex: sparkle.zIndex, opacity: sparkle.opacity }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0, rotate: 0 }}
