@@ -3,10 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 import { Button } from "@/components/ui/button";
-import { isLogged } from "@/lib/user";
+import { useIsLogged } from "@/lib/user";
 
 export function Header() {
   const router = useRouter();
+  const isLogged = useIsLogged();
 
   return (
     <header className="flex items-center justify-between border-b border-border px-6 py-4">
