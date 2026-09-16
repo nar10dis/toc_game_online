@@ -77,6 +77,37 @@ export class AuthService {
 
         const user = await this.prisma.user.findUnique({where: { id: payload.sub},});
 
-        
+        if(!user || !user.hashedRefreshToken) {
+            throw new UnauthorizedException();
+        }
+
+        const isValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
+        if (!isValid) {
+            throw new UnauthorizedException();
+        }
+
+        const newPayload = { sub: user.id, username: user.name };
+        const access_token = await this.jwtService.signAsync(newPayload);
+        const refresh_token = await this.jwtService.signAsync(newPayload, { 
+            secret: process.env.JWT_REFRESH_SECRET,
+            expiresIn: '7d',
+        });
+
+        const hash_refresh_token = await bcrypt.hash(refresh_token, 10);
+        await this.prisma.user.update({
+            where: {id: user.id },
+            data: { hashedRefreshToken: hash_refresh_token},
+        });
+        return { access_token, refresh_token};
+    }
+
+    async logout(userReq)
+    {
+        await this.jwtService.update({
+            where: {id: userReq.sub},
+            data: { hashedrefreshtoken: null}
+        })
     }
 }
+
+
