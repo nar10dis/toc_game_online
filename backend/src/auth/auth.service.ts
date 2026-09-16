@@ -101,11 +101,11 @@ export class AuthService {
         return { access_token, refresh_token};
     }
 
-    async logout(userReq)
+    async logout(userId: number)
     {
-        await this.jwtService.update({
-            where: {id: userReq.sub},
-            data: { hashedrefreshtoken: null}
+        await this.prisma.user.update({
+            where: {id: userId},
+            data: { hashedRefreshToken : null}
         })
     }
 }
