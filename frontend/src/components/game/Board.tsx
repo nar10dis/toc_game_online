@@ -96,7 +96,7 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
         //a start cell wears the colour of the team whose home sits behind it.
         const startCellTeam = getTeamOfStartCell(i);
         const isStartCell = startCellTeam >= 0;
-        const color = isStartCell ? TEAM_COLORS[startCellTeam] : "#29251f";
+        const color = isStartCell ? TEAM_COLORS[startCellTeam] : "var(--foreground)";
 
         return (
           <motion.path

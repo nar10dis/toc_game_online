@@ -22,7 +22,7 @@ type MovePreviewProps = {
 };
 
 /** The dotted trail shown under a pawn the player is about to move. */
-export function MovePreview({ color = "#29251f", stops }: MovePreviewProps) {
+export function MovePreview({ color = "var(--foreground)", stops }: MovePreviewProps) {
   if (stops.length < 2) return null;
 
   const arrival = stops[stops.length - 1];

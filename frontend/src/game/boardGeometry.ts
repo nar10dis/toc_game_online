@@ -26,12 +26,15 @@ export const SPAWN_CELLS = 4;
 /** One pawn per cell of the spawn zone. */
 export const PAWNS_PER_TEAM = SPAWN_CELLS;
 
-/** Team colours, in team order: top, right, bottom, left. */
+/**
+ * Team colours, in team order: top, right, bottom, left. The values live in
+ * globals.css (--team-0 to --team-3) so they follow the light and dark themes.
+ */
 export const TEAM_COLORS = [
-  "#d95757", // top
-  "#4d82b8", // right
-  "#d3a936", // bottom
-  "#57936f", // left
+  "var(--team-0)", // top
+  "var(--team-1)", // right
+  "var(--team-2)", // bottom
+  "var(--team-3)", // left
 ];
 
 /** Radius of the circle drawn for one cell. */
@@ -96,7 +99,7 @@ function geometry(boardSize: number) {
   const ox = mx - (sagitta * (mx - c)) / len;
   const oy = my - (sagitta * (my - c)) / len;
 
-  let start = deg(Math.atan2(p.y - oy, p.x - ox));
+  const start = deg(Math.atan2(p.y - oy, p.x - ox));
   let end = deg(Math.atan2(q.y - oy, q.x - ox));
   while (end - start > 180) end -= 360;
   while (end - start < -180) end += 360;
@@ -175,6 +178,12 @@ export function computeHomeCoords(
 const AVATAR_OFFSET = 118;
 
 /**
+ * Extra push for the right and left teams: their name is written across the
+ * spawn column, so the picture moves out until the name clears the pawns.
+ */
+const SIDE_AVATAR_EXTRA_OFFSET = 30;
+
+/**
  * Where the team's picture sits: right outside its spawn zone, on the way out
  * of the board — above the top team, left of the left one, and so on.
  */
@@ -182,10 +191,13 @@ export function computeAvatarCoords(team: number, boardSize = BOARD_SIZE): Point
   const g = geometry(boardSize);
   const scale = boardSize / BOARD_SIZE;
 
+  const isSideTeam = team % 2 === 1;
+  const offset = AVATAR_OFFSET + (isSideTeam ? SIDE_AVATAR_EXTRA_OFFSET : 0);
+
   // Top spawn, then one step further from the centre.
   const local = {
     x: g.c,
-    y: g.armY - (SPAWN_OFFSET + AVATAR_OFFSET) * scale,
+    y: g.armY - (SPAWN_OFFSET + offset) * scale,
   };
 
   // Rotate top → right → bottom → left.

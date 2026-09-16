@@ -51,7 +51,7 @@ type PawnProps = {
 
 /** One pawn, drawn inside the board's `svg`. */
 export function Pawn({
-  color = "#29251f",
+  color = "var(--foreground)",
   position,
   path = [],
   isSelectable = false,
@@ -143,7 +143,7 @@ export function Pawn({
       <motion.path
         d={handDrawnCirclePath(0, 0, PAWN_RADIUS, PAWN_WOBBLE_SEED)}
         fill={color}
-        stroke="#29251f"
+        stroke="var(--foreground)"
         strokeWidth={4}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -155,7 +155,7 @@ export function Pawn({
         cx={-PAWN_RADIUS * 0.3}
         cy={-PAWN_RADIUS * 0.35}
         r={PAWN_RADIUS * 0.28}
-        fill="#fdfcf8"
+        fill="var(--background)"
         opacity={0.55}
       />
     </motion.g>

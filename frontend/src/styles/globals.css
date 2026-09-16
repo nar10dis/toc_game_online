@@ -5,38 +5,59 @@
 /* @custom-variant dark (&:is(.dark *)); */
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* --- Palette ---------------------------------------------------------- */
+  /* text #25313e · background #E5DECF · primary #407fc1                     */
+  /* secondary #91b8e2 · accent #639ede                                      */
+  --background: #E5DECF;
+  --foreground: #25313E;
+
+  /* Surfaces posees sur le fond : le beige eclairci, pour qu'une carte
+     se detache sans passer au blanc pur. */
+  --card: #F4F0E6;
+  --card-foreground: #25313E;
+  --popover: #F4F0E6;
+  --popover-foreground: #25313E;
+
+  --primary: #407FC1;
+  --primary-foreground: #FFFFFF;
+  --secondary: #91B8E2;
+  --secondary-foreground: #25313E;
+  --accent: #639EDE;
+  --accent-foreground: #25313E;
+
+  /* Le fond assombri / le texte eclairci : deux derives, pas deux teintes. */
+  --muted: #D8D0BE;
+  --muted-foreground: #5D6B7A;
+
+  /* Hors palette : aucun rouge n'a ete fourni. */
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+
+  --border: #C9C0AC;
+  --input: #C9C0AC;
+  --ring: #407FC1;
+
+  --chart-1: #25313E;
+  --chart-2: #407FC1;
+  --chart-3: #639EDE;
+  --chart-4: #91B8E2;
+  --chart-5: #C9C0AC;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: #F4F0E6;
+  --sidebar-foreground: #25313E;
+  --sidebar-primary: #407FC1;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #639EDE;
+  --sidebar-accent-foreground: #25313E;
+  --sidebar-border: #C9C0AC;
+  --sidebar-ring: #407FC1;
+
+  /* Joueurs du plateau, dans l'ordre des equipes : haut, droite, bas, gauche. */
+  --team-0: #C0563E;
+  --team-1: #C98A2E;
+  --team-2: #5F7F4A;
+  --team-3: #7B5C8F;
 }
 
 /* @media (prefers-color-scheme: dark) {
@@ -55,15 +76,8 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
@@ -77,9 +91,26 @@ a {
   }
 }
 
+/* --- Design tokens : typographie -------------------------------------- */
+/* Echelle modulaire, ratio 1.333. Les line-heights Tailwind sont des     */
+/* ratios sans unite : ils s'adaptent tout seuls a ces nouvelles tailles. */
+@theme {
+  --text-sm: 0.75rem;
+  --text-base: 1rem;
+  --text-xl: 1.333rem;
+  --text-2xl: 1.777rem;
+  --text-3xl: 2.369rem;
+  --text-4xl: 3.158rem;
+  --text-5xl: 4.21rem;
+
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+}
+
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  --font-heading: var(--font-fraunces), ui-serif, Georgia, "Times New Roman", serif;
+  --font-body: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -111,6 +142,10 @@ a {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-team-0: var(--team-0);
+  --color-team-1: var(--team-1);
+  --color-team-2: var(--team-2);
+  --color-team-3: var(--team-3);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -121,38 +156,46 @@ a {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* La palette retournee : l'encre devient le fond, le papier devient
+     le texte. Inactif tant que rien ne pose la classe .dark. */
+  --background: #25313E;
+  --foreground: #E5DECF;
+  --card: #2E3C4B;
+  --card-foreground: #E5DECF;
+  --popover: #2E3C4B;
+  --popover-foreground: #E5DECF;
+  --primary: #639EDE;
+  --primary-foreground: #1A232D;
+  --secondary: #3A4B5E;
+  --secondary-foreground: #E5DECF;
+  --accent: #407FC1;
+  --accent-foreground: #E5DECF;
+  --muted: #334150;
+  --muted-foreground: #A9B4C0;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: #3E4E5F;
+  --input: #3E4E5F;
+  --ring: #639EDE;
+  --chart-1: #E5DECF;
+  --chart-2: #91B8E2;
+  --chart-3: #639EDE;
+  --chart-4: #407FC1;
+  --chart-5: #3A4B5E;
+  --sidebar: #2E3C4B;
+  --sidebar-foreground: #E5DECF;
+  --sidebar-primary: #639EDE;
+  --sidebar-primary-foreground: #1A232D;
+  --sidebar-accent: #407FC1;
+  --sidebar-accent-foreground: #E5DECF;
+  --sidebar-border: #3E4E5F;
+  --sidebar-ring: #639EDE;
+  /* Memes teintes, eclaircies pour rester lisibles sur l'encre. */
+  --team-0: #D9705A;
+  --team-1: #E0A94A;
+  --team-2: #8CAD68;
+  --team-3: #A07FB5;
 }
+
 
 @layer base {
   * {
@@ -162,6 +205,19 @@ a {
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-body;
   }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-bold;
+  }
+}
+
+/* --- Logo -------------------------------------------------------------- */
+/* Le logo est un PNG monochrome sur fond transparent : on ne l'affiche pas,
+   on s'en sert comme pochoir. La couleur vient de currentColor, donc le
+   logo suit exactement la couleur du texte qui l'entoure. */
+.logo-mask {
+  background-color: currentColor;
+  -webkit-mask: url('/logo.png') no-repeat center / contain;
+  mask: url('/logo.png') no-repeat center / contain;
 }
