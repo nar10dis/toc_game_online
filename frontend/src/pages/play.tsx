@@ -54,7 +54,7 @@ export default function Play() {
         padding: 24,
         boxSizing: "border-box",
         position: "relative",
-        overflow: "hidden",
+        overflow: "clip",
         ...paperStyle,
       }}
     >

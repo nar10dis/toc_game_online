@@ -10,7 +10,11 @@ export function Header() {
   const isLogged = useIsLogged();
 
   return (
-    <header className="flex items-center justify-between border-b border-border px-6 py-4">
+    <header className="sticky top-0 z-50 flex items-center justify-between bg-background px-6 py-4">
+      <div
+        aria-hidden
+        className="worn-line pointer-events-none absolute inset-x-0 bottom-0 border-b border-current opacity-70"
+      />
       <Link
         href={isLogged ? "/menu" : "/login"}
         className="flex items-center gap-3 text-foreground transition-opacity hover:opacity-70"

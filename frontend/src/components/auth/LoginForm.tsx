@@ -12,6 +12,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/auth/PasswordInput"
 
 export function LoginForm({
   className,
@@ -70,7 +71,7 @@ export function LoginForm({
         </Field>
         <Field>
           <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input id="password" name="password" type="password" required />
+          <PasswordInput id="password" name="password" required />
         </Field>
         <Field>
           {error && <FieldError>{error}</FieldError>}
@@ -88,7 +89,7 @@ export function LoginForm({
             className="text-center text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             Don&apos;t have an account?{" "}
-            <span className="underline underline-offset-4">Sign up</span>
+            <span className="worn-underline">Sign up</span>
           </Link>
         </Field>
       </FieldGroup>

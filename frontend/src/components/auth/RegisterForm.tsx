@@ -12,6 +12,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/auth/PasswordInput"
 
 export function RegisterForm({
   className,
@@ -97,10 +98,9 @@ export function RegisterForm({
         </Field>
         <Field>
           <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             required
             className="bg-background"
           />
@@ -120,7 +120,7 @@ export function RegisterForm({
             className="text-center text-sm text-muted-foreground transition-colors hover:text-primary"
           >
             Already have an account?{" "}
-            <span className="underline underline-offset-4">Sign in</span>
+            <span className="worn-underline">Sign in</span>
           </Link>
         </Field>
       </FieldGroup>
