@@ -83,6 +83,8 @@
     --color-blue-100: #dbeafe;
     --color-fuchsia-600: #c600db;
     --color-fuchsia-700: #a600b5;
+    --color-pink-100: #fce7f3;
+    --color-pink-200: #fccee8;
     --color-white: #fff;
     --spacing: .25rem;
     --container-md: 28rem;
@@ -127,6 +129,8 @@
       --color-blue-100: lab(92.0301% -2.24757 -11.6453);
       --color-fuchsia-600: lab(47.5131% 83.4271 -63.0363);
       --color-fuchsia-700: lab(39.787% 72.2653 -53.1244);
+      --color-pink-100: lab(93.5864% 9.01193 -3.15079);
+      --color-pink-200: lab(87.4504% 19.6 -6.46662);
     }
   }
 }
@@ -1090,6 +1094,14 @@
     }
   }
 
+  .bg-pink-100 {
+    background-color: var(--color-pink-100);
+  }
+
+  .bg-pink-200 {
+    background-color: var(--color-pink-200);
+  }
+
   .bg-primary {
     background-color: var(--primary);
   }
@@ -1100,6 +1112,10 @@
 
   .bg-transparent {
     background-color: #0000;
+  }
+
+  .bg-white {
+    background-color: var(--color-white);
   }
 
   .worn-line {
@@ -1394,10 +1410,6 @@
 
   .ring-background {
     --tw-ring-color: var(--background);
-  }
-
-  .ring-card {
-    --tw-ring-color: var(--card);
   }
 
   .ring-foreground\/10 {
