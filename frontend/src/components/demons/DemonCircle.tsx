@@ -22,8 +22,17 @@ const sparkleDegreesBehindDemon = 8;
 // How far a sparkle can land from the circle path, in px
 const sparkleMaxDistanceFromPath = 22;
 
-/** Wraps content in an invisible circle with the four demons slowly turning on it. */
-export function DemonCircle({ children }: { children: ReactNode }) {
+/**
+ * Wraps content in an invisible circle with the four demons slowly turning on it.
+ * "around" keeps the demons outside the content, "over" makes them cross over it.
+ */
+export function DemonCircle({
+  children,
+  variant = "around",
+}: {
+  children: ReactNode;
+  variant?: "around" | "over";
+}) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [radius, setRadius] = useState(0);
   // How far each demon is behind its normal place on the ring, in degrees (0 unless it was clicked)
@@ -40,13 +49,19 @@ export function DemonCircle({ children }: { children: ReactNode }) {
     }
 
     const observer = new ResizeObserver(() => {
+      if (variant === "over") {
+        // Smaller than the half diagonal, so the demons cross the content edges
+        const halfLongestSide = Math.max(content.offsetWidth, content.offsetHeight) / 2;
+        setRadius(halfLongestSide + circleMargin);
+        return;
+      }
       const halfDiagonal = Math.hypot(content.offsetWidth, content.offsetHeight) / 2;
       setRadius(halfDiagonal + circleMargin);
     });
     observer.observe(content);
 
     return () => observer.disconnect();
-  }, []);
+  }, [variant]);
 
   function getSparkleSpots() {
     return angleOffsets.map((angleOffset, index) => {
@@ -57,8 +72,20 @@ export function DemonCircle({ children }: { children: ReactNode }) {
     });
   }
 
+  let wrapperClasses = "relative flex items-center justify-center";
+  let contentClasses = "";
+  if (variant === "over") {
+    wrapperClasses = "relative flex w-full items-center justify-center";
+    contentClasses = "w-full";
+  }
+
   return (
-    <div className="relative flex items-center justify-center">
+    <div className={wrapperClasses}>
+      <div ref={contentRef} className={contentClasses}>
+        {children}
+      </div>
+
+      {/* Rendered after the content so the demons and sparkles are drawn on top of it */}
       {radius > 0 && (
         <>
           <SparkleTrail getSpots={getSparkleSpots} />
@@ -71,8 +98,6 @@ export function DemonCircle({ children }: { children: ReactNode }) {
           />
         </>
       )}
-
-      <div ref={contentRef}>{children}</div>
     </div>
   );
 }

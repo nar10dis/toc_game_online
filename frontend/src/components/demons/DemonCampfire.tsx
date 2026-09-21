@@ -27,6 +27,9 @@ const opacityBehindFire = 0.15;
 // Horizontal distance from the fire centre where a demon behind starts and ends fading, in px
 const fadeStartDistance = 130;
 const fadeFullDistance = 50;
+// Demons behind the fire walk left to right, so once past the centre they stay faded a bit longer and come back slowly
+const fadeBackStartDistance = 80;
+const fadeBackEndDistance = 200;
 const smallestScale = 0.65;
 const biggestScale = 1;
 
@@ -42,8 +45,10 @@ const gapUnderLogs = 10;
 // The logs don't reach the very bottom of the fire drawing
 const logsBottomInsideFire = 5;
 // The fire sits high enough that demons passing in front go under the logs instead of across them
+// The orbit sits a little higher than the fire, which stays where it was
+const orbitRaiseInPx = 10;
 const fireBottomAboveOrbitCentre =
-  demonHeight + danceHopInPx + gapUnderLogs - orbitRadiusY - logsBottomInsideFire;
+  demonHeight + danceHopInPx + gapUnderLogs - orbitRadiusY - logsBottomInsideFire - orbitRaiseInPx;
 
 // Sparkles start a little behind the demon, and around its body rather than at its feet
 const sparkleDegreesBehindDemon = 10;
@@ -63,7 +68,10 @@ function smoothStep(from: number, to: number, value: number) {
 /** How visible something is at this spot: 1 away from the fire, down to `opacityBehindFire` right behind it. */
 function opacityAroundFire(x: number, depth: number) {
   const isBehind = smoothStep(0.1, -0.25, depth);
-  const isOverFire = smoothStep(fadeStartDistance, fadeFullDistance, Math.abs(x));
+  const isOverFire =
+    x < 0
+      ? smoothStep(fadeStartDistance, fadeFullDistance, -x)
+      : smoothStep(fadeBackEndDistance, fadeBackStartDistance, x);
   return 1 - isBehind * isOverFire * (1 - opacityBehindFire);
 }
 
@@ -140,7 +148,7 @@ export function DemonCampfire() {
     // Hidden on mobile for now. No transform nor z-index on the wrappers, so demons and fire share the same stacking order
     <div className="relative mx-auto hidden h-96 w-full max-w-xl md:block" aria-hidden="true">
       {/* Centre of the orbit, on the ground under the fire */}
-      <div className="pointer-events-none absolute bottom-[90px] left-1/2">
+      <div className="pointer-events-none absolute bottom-[130px] left-1/2">
         <SparkleTrail getSpots={getSparkleSpots} />
 
         <div

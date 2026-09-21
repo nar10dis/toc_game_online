@@ -2,6 +2,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Title } from "@/components/layout/Title";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { DemonCircle } from "@/components/demons/DemonCircle";
+import { WornFrame } from "@/components/layout/WornFrame";
 
 const welcomePhrases = [
   "Toc toc toc ! Qui est là ?",
@@ -23,7 +24,9 @@ export default function LoginPage({ welcomePhrase }: { welcomePhrase: string }) 
         <div className="flex flex-col items-center gap-8">
           <Title>{welcomePhrase}</Title>
           <div className="w-96 max-w-full">
-            <LoginForm />
+            <WornFrame className="md:px-8 md:py-8">
+              <LoginForm />
+            </WornFrame>
           </div>
         </div>
       </DemonCircle>
