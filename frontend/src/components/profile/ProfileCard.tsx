@@ -9,9 +9,9 @@ export function ProfileCard({ name = "", email = "" }: { name?: string; email?: 
 
   return (
     // overflow-visible so the avatar can stick out of the card
-    <Card className="relative min-h-[70svh] w-full overflow-visible rounded-3xl p-3 shadow-xl ring-0">
+    <Card className="relative min-h-[70svh] w-full overflow-visible rounded-3xl bg-background p-3 shadow-xl ring-0">
       {/* z-10 keeps the avatar above the demons turning over the card */}
-      <Avatar className="absolute top-0 left-1/2 z-10 size-36 -translate-x-1/2 -translate-y-1/2 shadow-xl ring-8 ring-card">
+      <Avatar className="absolute top-0 left-1/2 z-10 size-36 -translate-x-1/2 -translate-y-1/2 shadow-xl ring-8 ring-background">
         <AvatarFallback className="font-heading text-5xl font-bold">{initials}</AvatarFallback>
       </Avatar>
 
