@@ -65,9 +65,6 @@ export function pathCells(from: number, steps: number): number[]
 	return (cells);
 }
 
-// La case la plus profonde ou un pion peut se poser : on ne saute par-dessus
-// personne, donc on s'arrete juste avant le premier pion rencontre.
-// Renvoie -1 quand la porte elle-meme est prise : plus personne ne rentre.
 export function homeLastFreeCell(pawns: Pawn[], seat: Seat): number
 {
 	for (let cell = 0; cell < HOME_CELLS_COUNT; cell++)
@@ -76,4 +73,12 @@ export function homeLastFreeCell(pawns: Pawn[], seat: Seat): number
 			return (cell - 1);
 	}
 	return (HOME_CELLS_COUNT - 1);
+}
+
+export function getStartHome(seat: Seat): number {
+	let startingCell = startCell(seat);
+
+	if (startingCell === 0)
+		return BOARD_CELLS_COUNT - 3;
+	return startingCell - 3;
 }

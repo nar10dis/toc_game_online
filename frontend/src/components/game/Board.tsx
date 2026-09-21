@@ -56,13 +56,52 @@ function calculateDrawTimings(boardSize: number) {
   return timings;
 }
 
+/** Size of the index written inside a cell, in board units. */
+const INDEX_FONT_SIZE = 22;
+
+/** The number written inside a cell, once the pen has finished drawing it. */
+function CellIndex({
+  x,
+  y,
+  label,
+  delay,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  delay: number;
+}) {
+  return (
+    <motion.text
+      x={x}
+      y={y}
+      className="font-body"
+      fill="var(--foreground)"
+      fontSize={INDEX_FONT_SIZE}
+      textAnchor="middle"
+      dominantBaseline="central"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.7 }}
+      transition={{ delay, duration: 0.2 }}
+    >
+      {label}
+    </motion.text>
+  );
+}
+
 type BoardProps = {
   boardSize?: number;
+  /** Writes the index of every cell inside it — handy to check the geometry. */
+  showIndexes?: boolean;
   /** Drawn on top of the board, in board coordinates — the pawns go here. */
   children?: ReactNode;
 };
 
-export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
+export function Board({
+  boardSize = BOARD_SIZE,
+  showIndexes = true,
+  children,
+}: BoardProps) {
   const cells = Array.from({ length: TOTAL_CELLS }, (_, i) => i);
 
   const homeCells = Array.from({ length: TEAMS_NUMBER * HOME_CELLS }, (_, i) => i);
@@ -99,19 +138,29 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
         const color = isStartCell ? TEAM_COLORS[startCellSeat] : "var(--foreground)";
 
         return (
-          <motion.path
-            key={`cell-${i}`}
-            d={path}
-            fill={color}
-            fillOpacity={isStartCell ? 0.3 : 0}
-            stroke={color}
-            strokeWidth={isStartCell ? 7 : 5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.9 }}
-            transition={{ delay: timing.delay, duration: timing.duration }}
-          />
+          <g key={`cell-${i}`}>
+            <motion.path
+              d={path}
+              fill={color}
+              fillOpacity={isStartCell ? 0.3 : 0}
+              stroke={color}
+              strokeWidth={isStartCell ? 7 : 5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.9 }}
+              transition={{ delay: timing.delay, duration: timing.duration }}
+            />
+
+            {showIndexes && (
+              <CellIndex
+                x={x}
+                y={y}
+                label={String(i)}
+                delay={timing.delay + timing.duration}
+              />
+            )}
+          </g>
         );
       })}
 
@@ -125,19 +174,25 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
         const path = handDrawnCirclePath(x, y, CELL_RADIUS, 1000 + i);
 
         return (
-          <motion.path
-            key={`home-${i}`}
-            d={path}
-            fill={color}
-            fillOpacity={0.22}
-            stroke={color}
-            strokeWidth={5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.9 }}
-            transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
-          />
+          <g key={`home-${i}`}>
+            <motion.path
+              d={path}
+              fill={color}
+              fillOpacity={0.22}
+              stroke={color}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.9 }}
+              transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
+            />
+
+            {/* prefixed, because homes have their own numbering */}
+            {showIndexes && (
+              <CellIndex x={x} y={y} label={`H${i}`} delay={i * 0.08 + 0.25} />
+            )}
+          </g>
         );
       })}
 
@@ -151,19 +206,25 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
         const path = handDrawnCirclePath(x, y, CELL_RADIUS, 2000 + i);
 
         return (
-          <motion.path
-            key={`spawn-${i}`}
-            d={path}
-            fill={color}
-            fillOpacity={0.18}
-            stroke={color}
-            strokeWidth={5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.9 }}
-            transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
-          />
+          <g key={`spawn-${i}`}>
+            <motion.path
+              d={path}
+              fill={color}
+              fillOpacity={0.18}
+              stroke={color}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.9 }}
+              transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
+            />
+
+            {/* prefixed, because spawns have their own numbering */}
+            {showIndexes && (
+              <CellIndex x={x} y={y} label={`S${i}`} delay={i * 0.08 + 0.25} />
+            )}
+          </g>
         );
       })}
 
