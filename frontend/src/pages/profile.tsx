@@ -5,8 +5,8 @@ import { DemonCircle } from "@/components/demons/DemonCircle";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Subtitle } from "@/components/layout/Title";
 import { ProfileCard } from "@/components/profile/ProfileCard";
-import { getMe } from "@/lib/user";
-import type { Me } from "@/lib/user";
+import { getMe } from "@/api/user";
+import type { Me } from "@/api/user";
 
 export default function Profile() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function Profile() {
       {/* mt-20 leaves room for the avatar sticking out of the card */}
       <div className="mt-20 w-full max-w-4xl">
         <DemonCircle variant="over">
-          <ProfileCard name={me.name} email={me.email} />
+          <ProfileCard name={me.user.name} email={me.user.email}/>
         </DemonCircle>
       </div>
     </PageLayout>

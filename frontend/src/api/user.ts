@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 
 export type Me = {
-  id: number;
-  name: string;
-  email: string;
-  createdAt: string;
+  userId: number;
+  bio: string | null;
+  avatarUrl: string | null;
+  user: { name: string; email: string };
 };
 
 // Returns null when nobody is logged in (the backend answers 401)
 export async function getMe(): Promise<Me | null> {
-  let response = await fetch("/api/users/me");
+  let response = await fetch("/api/profile");
 
   // The jwt cookie only lives 15 minutes, the refresh_token gives us a new one
   if (response.status === 401) {
@@ -17,7 +17,7 @@ export async function getMe(): Promise<Me | null> {
     if (!refreshResponse.ok) {
       return null;
     }
-    response = await fetch("/api/users/me");
+    response = await fetch("/api/profile");
   }
 
   if (!response.ok) {
@@ -31,7 +31,7 @@ export async function getUsername(): Promise<string | null> {
   if (!me) {
     return null;
   }
-  return me.name;
+  return me.user.name;
 }
 
 // The jwt cookie is httpOnly, so asking the backend is the only way to know if we are logged in

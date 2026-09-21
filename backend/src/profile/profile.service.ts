@@ -5,19 +5,23 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
-  
+
   async findOne(userId: number) {
     const profile = await this.prisma.profile.findUnique({
       where: {
         userId,
-      }
+      },
+      include: {
+        user: {
+          select: { name: true, email: true }
+    }}
     })
     if (!profile)
       throw new NotFoundException( 'Profile not found' );
-    
+
     return profile;
   }
-  
+
   // async findAll() {
   //     const profiles = await this.prisma.profile.findMany()
   //     return profiles;

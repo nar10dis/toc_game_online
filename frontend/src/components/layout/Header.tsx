@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 import { Button } from "@/components/ui/button";
-import { useIsLogged } from "@/lib/user";
+import { useIsLogged } from "@/api/user";
 
 export function Header() {
   const router = useRouter();
