@@ -8,7 +8,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useUsername } from "@/lib/user";
+import { useUsername } from "@/api/user";
 
 // h-auto and whitespace-normal undo the single-line sizing the Button ships with.
 const bigButtonClasses =
