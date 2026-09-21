@@ -12,8 +12,11 @@ import { handDrawnCirclePath } from "@/game/handDrawn";
 /*                                 CONST DEF                                  */
 /* ************************************************************************** */
 
-/** Team whose picture is left out: the player sits there, next to the cards. */
-const BOTTOM_TEAM = 2;
+/**
+ * Seat whose picture is left out: the player sits there, next to the cards.
+ * Seat 3 is the one whose zones are drawn on the bottom arm — see `armOfSeat`.
+ */
+const BOTTOM_SEAT = 3;
 
 const AVATAR_RADIUS = 78;
 
@@ -57,7 +60,7 @@ type PlayerAvatarsProps = {
 
 /** The other players' pictures, next to their spawn zone. Goes inside a `Board`. */
 export function PlayerAvatars({
-  playerTeam = BOTTOM_TEAM,
+  playerTeam = BOTTOM_SEAT,
   playerNames = DEFAULT_PLAYER_NAMES,
   boardSize = BOARD_SIZE,
 }: PlayerAvatarsProps) {

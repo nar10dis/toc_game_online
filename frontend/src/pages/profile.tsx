@@ -35,7 +35,7 @@ export default function Profile() {
       {/* mt-20 leaves room for the avatar sticking out of the card */}
       <div className="mt-20 w-full max-w-4xl">
         <DemonCircle variant="over">
-          <ProfileCard name={me.user.name} email={me.user.email}/>
+          <ProfileCard name={me.user.name} email={me.user.email} bio={me.bio}/>
         </DemonCircle>
       </div>
     </PageLayout>

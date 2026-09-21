@@ -1,29 +1,55 @@
-// import { Card, Pawn } from "../game.types"
+import { Card, Pawn, Seat, HOME_CELLS_COUNT, BOARD_CELLS_COUNT} from "../game.types"
+import { pawnAt, pawnsOf, startCell, pathCells, getSeatOfStartCell, homeLastFreeCell} from "./board"
 
-// //POUR LE FRONT QUAND ON HOVER SUR UN PION
-// //A CONDIITON QUUNE CARTE SOIT JOUEE.
+export function canExit(pawns: Pawn[], card : Card, pawn: Pawn) : boolean {
 
-// export function canExit(pawns: Pawn[], card : Card, ) : boolean {
+	if (pawn.position.zone !== 'spawn')
+			return false;
+	if (card.value !== 13 && card.value !== 1)
+		return false;
 
-// 	//est ce que la carte est un as ou un roi
-// 		// si non return false
-// 	//est ce que ma case de sortie est prise
-// 	// -> pawnAt(startCell(player.Seat))
-// 		//est ce que c un pion adverse -> hes dead
-// 			//return true
-// 		//return false
+	const myStartCell = startCell(pawn.playerSeat);
+	const blocker = pawnAt(pawns, myStartCell);
 
-// 	// exitPawn();
-// 	return true;
-// }
-// export function canMove() : boolean {
-// 	return true;
-// }
+	if (blocker !== null)
+	{
+		if (blocker.playerSeat === pawn.playerSeat)
+			return false;
+	}
+	return true;
+}
 
-// export function canSwap()
+export function canMove(pawns: Pawn[], card: Card, pawn: Pawn) : boolean {
 
-// export function canEnterHome()
+	if (pawn.position.zone === 'spawn')
+		return false;
 
+	const allCells : number[] = pathCells(pawn.position.cell, card.value);
 
-//TO DO LATER
-//export function canSplit()
+	//si ya un spawn sur son chemin
+	// si le pion a le meme seat que le spawn -> false
+	for (let i = pawn.position.cell; i < allCells.length; i++)
+	{
+		let spawnSeat: Seat | null = getSeatOfStartCell(i);
+
+		if (pawnAt(pawns, i)?.playerSeat === spawnSeat)
+			return false;
+	}
+	return true;
+}
+
+export function canGoHome(pawns : Pawn[], card: Card, pawn: Pawn) : boolean {
+	const remainingCells = homeLastFreeCell(pawns, pawn.playerSeat, )
+}
+
+export function canSwap(pawns: Pawn[], card: Card, pawnA: Pawn, pawnB: Pawn) : boolean {
+
+	if (card.value !== 11)
+		return false;
+	if (pawnA.position.zone === 'spawn' || pawnB.position.zone === 'spawn')
+			return false;
+	return true;
+}
+
+// TO DO LATER
+// export function canSplit()

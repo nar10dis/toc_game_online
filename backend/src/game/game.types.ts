@@ -80,6 +80,7 @@ export type SplitStep = {
 
 export type GameAction =
   | { type: 'move'; cardId: CardId; pawnId: number }
+  | { type: 'enter'; cardId: CardId; pawnId: number }
   | { type: 'exit'; cardId: CardId; pawnId: number }
   | { type: 'swap'; cardId: CardId; pawnIdA: number; pawnIdB: number }
   | { type: 'split'; cardId: CardId; steps: SplitStep[] }

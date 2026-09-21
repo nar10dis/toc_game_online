@@ -13,7 +13,7 @@ import {
   computeCoordsFromIndex,
   computeHomeCoords,
   computeSpawnCoords,
-  getTeamOfStartCell,
+  getSeatOfStartCell,
 } from "@/game/boardGeometry";
 import { handDrawnCirclePath } from "@/game/handDrawn";
 
@@ -93,10 +93,10 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
         const path = handDrawnCirclePath(x, y, CELL_RADIUS, i);
         const timing = timings[i];
 
-        //a start cell wears the colour of the team whose home sits behind it.
-        const startCellTeam = getTeamOfStartCell(i);
-        const isStartCell = startCellTeam >= 0;
-        const color = isStartCell ? TEAM_COLORS[startCellTeam] : "var(--foreground)";
+        //a start cell wears the colour of the seat that comes out on it.
+        const startCellSeat = getSeatOfStartCell(i);
+        const isStartCell = startCellSeat >= 0;
+        const color = isStartCell ? TEAM_COLORS[startCellSeat] : "var(--foreground)";
 
         return (
           <motion.path
@@ -119,8 +119,8 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
       {homeCells.map((i) => {
         const { x, y } = computeHomeCoords(i, boardSize);
 
-        const team = Math.floor(i / HOME_CELLS);
-        const color = TEAM_COLORS[team];
+        const seat = Math.floor(i / HOME_CELLS);
+        const color = TEAM_COLORS[seat];
 
         const path = handDrawnCirclePath(x, y, CELL_RADIUS, 1000 + i);
 
@@ -145,8 +145,8 @@ export function Board({ boardSize = BOARD_SIZE, children }: BoardProps) {
       {spawnCells.map((i) => {
         const { x, y } = computeSpawnCoords(i, boardSize);
 
-        const team = Math.floor(i / SPAWN_CELLS);
-        const color = TEAM_COLORS[team];
+        const seat = Math.floor(i / SPAWN_CELLS);
+        const color = TEAM_COLORS[seat];
 
         const path = handDrawnCirclePath(x, y, CELL_RADIUS, 2000 + i);
 

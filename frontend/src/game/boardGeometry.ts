@@ -27,14 +27,15 @@ export const SPAWN_CELLS = 4;
 export const PAWNS_PER_TEAM = SPAWN_CELLS;
 
 /**
- * Team colours, in team order: top, right, bottom, left. The values live in
- * globals.css (--team-0 to --team-3) so they follow the light and dark themes.
+ * Team colours, in seat order — see `armOfSeat` for the arm each seat owns.
+ * The values live in globals.css (--team-0 to --team-3) so they follow the
+ * light and dark themes.
  */
 export const TEAM_COLORS = [
-  "var(--team-0)", // top
-  "var(--team-1)", // right
-  "var(--team-2)", // bottom
-  "var(--team-3)", // left
+  "var(--team-0)", // seat 0, drawn on the left arm
+  "var(--team-1)", // seat 1, drawn on the top arm
+  "var(--team-2)", // seat 2, drawn on the right arm
+  "var(--team-3)", // seat 3, drawn on the bottom arm
 ];
 
 /** Radius of the circle drawn for one cell. */
@@ -108,6 +109,31 @@ function geometry(boardSize: number) {
 }
 
 /* ************************************************************************** */
+/*                               SEATS AND ARMS                               */
+/* ************************************************************************** */
+
+/**
+ * Seats are numbered the way the backend numbers them: the seat `s` enters the
+ * track on cell `s * CELLS_PER_ARM`, so seat 0 starts on cell 0.
+ *
+ * The drawing ties a home to the cell it opens onto: the home of an arm leaves
+ * the track three cells before the *next* arm begins. So the zones of a seat —
+ * its home, its spawn and its picture — are drawn on the arm BEFORE its start
+ * cell, one quarter-turn back.
+ *
+ *      seat 0 → arm 3 (left)      seat 2 → arm 1 (right)
+ *      seat 1 → arm 0 (top)       seat 3 → arm 2 (bottom)
+ */
+export function armOfSeat(seat: number): number {
+  return (seat + TEAMS_NUMBER - 1) % TEAMS_NUMBER;
+}
+
+/** The seat whose zones are drawn on this arm — the other way round. */
+export function seatOfArm(arm: number): number {
+  return (arm + 1) % TEAMS_NUMBER;
+}
+
+/* ************************************************************************** */
 /*                              CELL COORDINATES                              */
 /* ************************************************************************** */
 
@@ -138,7 +164,7 @@ export function computeCoordsFromIndex({
 
 /** A point `distance` down the line that runs from tile 15 of the arm to the centre. */
 function walkHomeLine(
-  team: number,
+  arm: number,
   distance: number,
   boardSize: number
 ): Point {
@@ -146,7 +172,7 @@ function walkHomeLine(
 
   // Tile 15 of this arm.
   const cell15 = computeCoordsFromIndex({
-    index: team * CELLS_PER_ARM + 15,
+    index: arm * CELLS_PER_ARM + 15,
     boardSize,
   });
 
@@ -162,16 +188,23 @@ function walkHomeLine(
   };
 }
 
-/** Centre of home cell `homeIndex`, from 0 to `TEAMS_NUMBER * HOME_CELLS - 1`. */
+/**
+ * Centre of home cell `homeIndex`, from 0 to `TEAMS_NUMBER * HOME_CELLS - 1`.
+ * The index is read as `seat * HOME_CELLS + cell`, cell 0 being the door.
+ */
 export function computeHomeCoords(
   homeIndex: number,
   boardSize = BOARD_SIZE
 ): Point {
-  const team = Math.floor(homeIndex / HOME_CELLS);
+  const seat = Math.floor(homeIndex / HOME_CELLS);
   const cell = homeIndex % HOME_CELLS;
 
   // Start just inside tile 15 and continue toward the center.
-  return walkHomeLine(team, (cell + 1) * HOME_CELL_SPACING, boardSize);
+  return walkHomeLine(
+    armOfSeat(seat),
+    (cell + 1) * HOME_CELL_SPACING,
+    boardSize
+  );
 }
 
 /** How far past the spawn zone the team's picture sits, away from the centre. */
@@ -187,12 +220,14 @@ const SIDE_AVATAR_EXTRA_OFFSET = 30;
  * Where the team's picture sits: right outside its spawn zone, on the way out
  * of the board — above the top team, left of the left one, and so on.
  */
-export function computeAvatarCoords(team: number, boardSize = BOARD_SIZE): Point {
+export function computeAvatarCoords(seat: number, boardSize = BOARD_SIZE): Point {
   const g = geometry(boardSize);
   const scale = boardSize / BOARD_SIZE;
 
-  const isSideTeam = team % 2 === 1;
-  const offset = AVATAR_OFFSET + (isSideTeam ? SIDE_AVATAR_EXTRA_OFFSET : 0);
+  const arm = armOfSeat(seat);
+
+  const isSideArm = arm % 2 === 1;
+  const offset = AVATAR_OFFSET + (isSideArm ? SIDE_AVATAR_EXTRA_OFFSET : 0);
 
   // Top spawn, then one step further from the centre.
   const local = {
@@ -201,17 +236,20 @@ export function computeAvatarCoords(team: number, boardSize = BOARD_SIZE): Point
   };
 
   // Rotate top → right → bottom → left.
-  return rotate(local, team, g.c);
+  return rotate(local, arm, g.c);
 }
 
-/** Centre of spawn cell `spawnIndex`, from 0 to `TEAMS_NUMBER * SPAWN_CELLS - 1`. */
+/**
+ * Centre of spawn cell `spawnIndex`, from 0 to `TEAMS_NUMBER * SPAWN_CELLS - 1`.
+ * The index is read as `seat * SPAWN_CELLS + slot`.
+ */
 export function computeSpawnCoords(
   spawnIndex: number,
   boardSize = BOARD_SIZE
 ): Point {
   const g = geometry(boardSize);
 
-  const team = Math.floor(spawnIndex / SPAWN_CELLS);
+  const arm = armOfSeat(Math.floor(spawnIndex / SPAWN_CELLS));
   const cell = spawnIndex % SPAWN_CELLS;
 
   const scale = boardSize / BOARD_SIZE;
@@ -229,7 +267,7 @@ export function computeSpawnCoords(
   };
 
   // Rotate top → right → bottom → left.
-  return rotate(local, team, g.c);
+  return rotate(local, arm, g.c);
 }
 
 /* ************************************************************************** */
@@ -237,24 +275,24 @@ export function computeSpawnCoords(
 /* ************************************************************************** */
 
 /**
- * Cell a pawn of `team` enters the track on: the first cell of the next arm,
- * which is the one with the team's own home zone drawn behind it.
+ * Cell a pawn of `seat` enters the track on — same numbering as the backend's
+ * `startCell()`: seat 0 starts on cell 0, seat 1 eighteen cells further, and so
+ * on. The seat's own home opens onto the track three cells earlier.
  */
-export function getStartCellIndex(team: number): number {
-  return ((team + 1) % TEAMS_NUMBER) * CELLS_PER_ARM;
+export function getStartCellIndex(seat: number): number {
+  return seat * CELLS_PER_ARM;
 }
 
-/** Team owning the start cell `cellIndex`, or -1 when it is a plain cell. */
-export function getTeamOfStartCell(cellIndex: number): number {
+/** Seat owning the start cell `cellIndex`, or -1 when it is a plain cell. */
+export function getSeatOfStartCell(cellIndex: number): number {
   if (cellIndex % CELLS_PER_ARM !== 0) return -1;
 
-  const arm = cellIndex / CELLS_PER_ARM;
-  return (arm + TEAMS_NUMBER - 1) % TEAMS_NUMBER;
+  return cellIndex / CELLS_PER_ARM;
 }
 
-/** Index of the spawn cell `slot` of `team`, used to place a waiting pawn. */
-export function getSpawnCellIndex(team: number, slot: number): number {
-  return team * SPAWN_CELLS + slot;
+/** Index of the spawn cell `slot` of `seat`, used to place a waiting pawn. */
+export function getSpawnCellIndex(seat: number, slot: number): number {
+  return seat * SPAWN_CELLS + slot;
 }
 
 /** Every cell a pawn walks over, the destination last. Wraps around the track. */
