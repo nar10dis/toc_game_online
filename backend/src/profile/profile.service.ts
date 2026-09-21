@@ -1,13 +1,9 @@
 import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
-import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ProfileService {
-  // findAll() {
-  //   return `This action returns all profile`;
-  // }
   constructor(private readonly prisma: PrismaService) {}
   
   async findOne(userId: number) {
@@ -17,17 +13,35 @@ export class ProfileService {
       }
     })
     if (!profile)
-      throw new NotFoundException();
-
+      throw new NotFoundException( 'Profile not found' );
+    
     return profile;
   }
+  
+  // async findAll() {
+  //     const profiles = await this.prisma.profile.findMany()
+  //     return profiles;
+  //   }
 
-  update(userId: number, updateProfileDto: UpdateProfileDto) {
-
-    return `This action updates a #${userId} profile`;
+  async update(userId: number, updateProfileDto: UpdateProfileDto) {
+    await this.prisma.profile.update({
+      where: {
+        userId,
+      },
+      data: {
+        bio: updateProfileDto.bio,
+        avatarUrl: updateProfileDto.avatar,
+      },
+    })
+    return `#${userId} profile updated`;
   }
 
-  remove(userId: number) {
-    return `This action removes a #${userId} profile`;
-  }
+  // async remove(userId: number) {
+  //   await this.prisma.profile.delete({
+  //     where: {
+  //       userId,
+  //   }
+  //   })
+  //   return `This action removes a #${userId} profile`;
+  // }
 }

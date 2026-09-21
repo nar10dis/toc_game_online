@@ -22,12 +22,12 @@ model User {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   hashedRefreshToken  String?
-  profile             Profile
+  profile             Profile?
 }
 
 model Profile {
   userId              Int       @unique
-  user                User      @relation(fields: [userId], references: [id])
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bio                 String?
   avatarUrl           String?
   
