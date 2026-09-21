@@ -30,5 +30,19 @@ model Profile {
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bio                 String?
   avatarUrl           String?
-  
+}
+
+model Game {
+  idGame              Int       @id @default(autoincrement())
+  inviteCode          String    @unique
+  phase
+  winnerSeat          Int?             
+  createdAt           DateTime  @default(now())
+  finishedAt          DateTime? @updatedAt
+}
+
+model GamePlayer {
+  id                  Int       @id @default(autoincrement())
+  idGame              Int
+  game                Game      @relation(fields: [idGame], references: [idGame])
 }
