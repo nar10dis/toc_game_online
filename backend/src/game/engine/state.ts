@@ -5,16 +5,16 @@ import { createDeck, dealCards, shuffleDeck } from "./deck";
 export const PAWN_BY_PLAYER = 4;
 
 //waiting / create
-export function initGame(id: number, inviteCode: string, host: Player): Game
-{
-}
+// export function initGame(id: number, inviteCode: string, host: Player): Game
+// {
+// }
 
-//waiting  / join
-export function addPlayer(game: Game, player: Player): Game | null {
+// //waiting  / join
+// export function addPlayer(game: Game, player: Player): Game | null {
 
-	if (game.players.length === 4)
-		return null;
-}
+// 	if (game.players.length === 4)
+// 		return null;
+// }
 
 function createPawns(players: Player[]) : Pawn[] {
 
