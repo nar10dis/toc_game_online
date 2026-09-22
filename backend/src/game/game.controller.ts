@@ -8,10 +8,15 @@ export class GameController {
 
     @UseGuards(AuthGuard)
     @Post()
-    createGame(@Req() req, ) {
-        return this.gameService.createGame(req.user.sub, )
+    createGame(@Req() req: Request) {
+        const user = (req as any).user;
+        return this.gameService.createGame(user.sub, user.username)
     }
 
-
-
+    @UseGuards(AuthGuard)
+    @Post()
+    joinGame(@Param('inviteCode') inviteCode: string ,@Req() req: Request) {
+        const user = (req as any).user;
+        return this.gameService.joinGame(inviteCode, user.sub, user.username);
+    }
 }

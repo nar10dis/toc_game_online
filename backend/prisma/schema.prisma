@@ -23,6 +23,7 @@ model User {
   updatedAt           DateTime  @updatedAt
   hashedRefreshToken  String?
   profile             Profile?
+  gamePlayers         GamePlayer[]
 }
 
 model Profile {
@@ -35,14 +36,25 @@ model Profile {
 model Game {
   idGame              Int       @id @default(autoincrement())
   inviteCode          String    @unique
-  phase
+  phase               GamePhase
   winnerSeat          Int?             
   createdAt           DateTime  @default(now())
-  finishedAt          DateTime? @updatedAt
+  finishedAt          DateTime? 
+  gamePlayers         GamePlayer[]
 }
 
+enum GamePhase { 
+  waiting
+  playing 
+  finished
+  }
+
 model GamePlayer {
-  id                  Int       @id @default(autoincrement())
-  idGame              Int
-  game                Game      @relation(fields: [idGame], references: [idGame])
+  idPlayer            Int       @id @default(autoincrement())
+  gameId              Int       
+  game                Game      @relation(fields: [gameId], references: [idGame])
+  userId              Int      
+  user                User      @relation(fields: [userId], references: [id])
+  seat                Int
+  joindedAt           DateTime  @default(now())
 }

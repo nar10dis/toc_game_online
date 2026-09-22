@@ -1,17 +1,107 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { randomInt } from 'crypto';
+import * as GameTypes from './game.types';
 
 @Injectable()
 export class GameService {
     constructor(private prisma: PrismaService) {}
+   
+    private games = new Map<number, GameTypes.Game>();
+   
+    private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-    generateInviteCode(): string {
-        const inviteCode = crypto.randomInt()
+    private generateInviteCode(): string {
+        let inviteCode: string;
+        do {
+            inviteCode = '';
+            for (let i = 0; i < 8; i++) {
+            const index = randomInt(0, this.CHARSET.length);
+            inviteCode += this.CHARSET[index];
+            }
+        } while (
+            [...this.games.values()].some(game => game.inviteCode === inviteCode,)
+        );
+        return inviteCode;
     }
-    createGame(userId: number, pseudo: string)
+
+    async createGame(userId: number, pseudo: string)
     {
-        const player:
+        const inviteCode = this.generateInviteCode();
+
+        const dbGame = await this.prisma.game.create({
+            data: {
+                inviteCode,
+                phase: 'waiting'
+            },
+        });
+
+        await this.prisma.gamePlayer.create({
+            data: {
+                gameId: dbGame.idGame,
+                userId,
+                seat: 0
+            },
+        });
+        const hostPlayer: GameTypes.Player = {
+                userId,
+                pseudo,
+                seat: 0,
+                hand: [],
+                isConnected: true,
+        }
+        const game: GameTypes.Game = {
+                id: dbGame.idGame,
+                inviteCode,
+                phase: 'waiting',
+                players: [hostPlayer],
+                pawns: [],
+                drawPile: [],
+                discardPile: [],
+                currentSeat: 0,
+                winner: null,
+        }
+        // this.createGame.set(game.id, game);
+
+        return { gameId: game.id, inviteCode };
          
-        const game:
     }
+
+    async joinGame(inviteCode: string, userId: number,  pseudo: string) {
+        const game = [...this.games.values()].find(g=>g.inviteCode === inviteCode);
+        if (!game)
+            throw new NotFoundException('Invalid invite code');
+        if (game.phase !== 'waiting')
+            throw new ConflictException('Game already started');
+        if (game.players.length >= 4)
+            throw new ConflictException('Room is full, sorry');
+        
+        const alreadyIn = game.players.some(p => p.userId === userId);
+        if (alreadyIn)
+                return game;
+        
+        const seat = game.players.length;
+
+        await this.prisma.gamePlayer.create({
+            data: {
+                gameId: game.id,
+                userId,
+                seat
+            },
+        });
+
+        const newPlayer: GameTypes.Player = {
+            userId,
+            pseudo,
+            seat: null,
+            hand: [],
+            isConnected: true,
+        }
+
+        game.players.push(newPlayer);
+
+        return game;
+    }
+
+
 }
