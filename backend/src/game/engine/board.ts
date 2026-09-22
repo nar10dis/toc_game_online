@@ -82,3 +82,9 @@ export function getStartHome(seat: Seat): number {
 		return BOARD_CELLS_COUNT - 3;
 	return startingCell - 3;
 }
+
+export function homeCellIndex(seat: Seat, from: number, steps: number): number {
+	const toEntry = mod(getStartHome(seat) - from, BOARD_CELLS_COUNT);
+
+	return (steps - toEntry - 1);
+}

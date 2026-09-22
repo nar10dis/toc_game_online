@@ -1,7 +1,8 @@
 import { Card, Pawn, Seat, HOME_CELLS_COUNT, BOARD_CELLS_COUNT} from "../game.types"
-import { pawnAt, pawnsOf, startCell, pathCells, getSeatOfStartCell,
-	homeLastFreeCell, getStartHome, pawnAtHome} from "./board"
+import { pawnAt, pathCells, getSeatOfStartCell, pawnsOf,
+	homeLastFreeCell, getStartHome, pawnAtHome, homeCellIndex} from "./board"
 import { mod } from "./utils"
+
 export function canExit(pawns: Pawn[], card : Card, pawn: Pawn) : boolean {
 
 	if (pawn.position.zone !== 'spawn')
@@ -9,14 +10,8 @@ export function canExit(pawns: Pawn[], card : Card, pawn: Pawn) : boolean {
 	if (card.value !== 13 && card.value !== 1)
 		return false;
 
-	const myStartCell = startCell(pawn.playerSeat);
-	const blocker = pawnAt(pawns, myStartCell);
-
-	if (blocker !== null)
-	{
-		if (blocker.playerSeat === pawn.playerSeat)
-			return false;
-	}
+	//On sort meme si la case de sortie est occupee : le pion dessus se fait
+	//tuer, y compris si c'est un des notres.
 	return true;
 }
 
@@ -53,7 +48,8 @@ export function canGoHome(pawns : Pawn[], card: Card, pawn: Pawn) : boolean {
 	const toEntry = mod(startHome - pawn.position.cell, BOARD_CELLS_COUNT);
 	const distanceMax = toEntry + 1 + lastCell;
 
-	if (card.value < toEntry + 1|| card.value > distanceMax)
+	const target = homeCellIndex(pawn.playerSeat, pawn.position.cell, card.value);
+	if (target < 0 || target > lastCell)
 		return false;
 	return true;
 }
@@ -86,6 +82,27 @@ export function canSwap(pawns: Pawn[], card: Card, pawnA: Pawn, pawnB: Pawn) : b
 		return false;
 	if (pawnA.position.zone !== 'board' || pawnB.position.zone !== 'board')
 		return false;
+	return true;
+}
+
+//permise si cette carte ne permet aucun coup.
+export function canDiscard(pawns: Pawn[], card: Card, seat: Seat) : boolean {
+	for (const pawn of pawnsOf(pawns, seat))
+	{
+			if (canExit(pawns, card, pawn))
+				return false;
+			if (canMove(pawns, card, pawn))
+				return false;
+			if (canGoHome(pawns, card, pawn))
+				return false;
+			if (canMoveInHome(pawns, card, pawn))
+				return false;
+			for (const other of pawns)
+			{
+				if (canSwap(pawns, card, pawn, other))
+					return false;
+			}
+	}
 	return true;
 }
 

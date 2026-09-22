@@ -74,4 +74,3 @@ export function useUsername(): string | null {
 
   return username;
 }
-``
