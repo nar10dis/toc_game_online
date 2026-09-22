@@ -26,6 +26,22 @@ export async function getMe(): Promise<Me | null> {
   return response.json();
 }
 
+
+//TO DO !!!
+// TO DO -> coder une fonction utils -> refreshAuth();
+
+// export async function updateProfile(bio:string, avatar: string)
+// {
+//   let response = await fetch("/api/profile". {
+//     method: "PATCH",
+//     headers: {"Content-Type": "application/json"},
+//     body: JSON.stringify({bio, avatar}),
+//   });
+//   if (response.status === 401) {
+//     const refresh = fetch("/a[")
+//   }
+// }
+
 export async function getUsername(): Promise<string | null> {
   const me = await getMe();
   if (!me) {
