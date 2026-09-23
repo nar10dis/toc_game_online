@@ -19,4 +19,11 @@ export class GameController {
         const user = (req as any).user;
         return this.gameService.joinGame(inviteCode, user.sub, user.username);
     }
+
+    @UseGuards(AuthGuard)
+    @Post()
+    startGame(@Param('gameId') gameId: number, @Req() req: Request) {
+        const requesterUserId = (req as any).user;
+        return this.gameService.startGame(gameId, requesterUserId.sub)
+    }
 }
