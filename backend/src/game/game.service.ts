@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
@@ -61,6 +61,25 @@ export class GameService {
         game = addPlayer(game, userId, pseudo);
 
         this.commit(game);
+        const hostPlayer: GameTypes.Player = {
+                userId,
+                pseudo,
+                seat: 0,
+                hand: [],
+                isConnected: true,
+        }
+        const game: GameTypes.Game = {
+                id: dbGame.idGame,
+                inviteCode,
+                phase: 'waiting',
+                players: [hostPlayer],
+                pawns: [],
+                drawPile: [],
+                discardPile: [],
+                currentSeat: 0,
+                winner: null,
+        }
+        this.games.set(game.id, game);
 
         return { gameId: game.id, inviteCode };
     }
@@ -78,7 +97,7 @@ export class GameService {
         if (alreadyIn)
             return game;
 
-        const seat = game.players.length;
+        const seat = game.players.length as GameTypes.Seat;
 
         await this.prisma.gamePlayer.create({
             data: {
@@ -97,5 +116,41 @@ export class GameService {
         return game;
     }
 
+    async startGame(gameId: number, requesterUserId: number) {
+        const game = this.games.get(gameId);
+        if(!game)
+            throw new NotFoundException('Game not found');
+
+        const isHost = game.players[0]?.userId === requesterUserId;
+        if (!isHost)
+            throw new ForbiddenException('Only the host can lock the team');
+        if (game.phase !== 'waiting')
+            throw new ConflictException('Game already started');
+
+        let nextSeat = game.players.length as GameTypes.Seat;
+        while (nextSeat < 4) {
+            game.players.push({
+                userId: null,
+                pseudo: `IA ${nextSeat + 1}`,
+                seat: nextSeat,
+                hand: [],
+                isConnected: true,
+            });
+            nextSeat++;
+        }
+
+        //==> fnct add IA player
+        // ==>Lancer game ici
+
+        game.phase = 'playing';
+        this.games.set(gameId, game);
+
+        await this.prisma.game.update({
+            where: { idGame: gameId },
+            data: { phase: 'playing' },
+        });
+
+        return game;
+    }
 
 }
