@@ -46,7 +46,7 @@ export type Player = {
   // null = place tenue par l'IA, elle n'a pas de compte
   userId: number | null;
   pseudo: string;
-  seat: Seat | null;
+  seat: Seat;
   hand: Card[];
   isConnected: boolean;
 };

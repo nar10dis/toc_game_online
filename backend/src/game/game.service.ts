@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException } 
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
-import { initGame, addPlayer} from './engine/state';
+// import { initGame, addPlayer} from './engine/state';
 @Injectable()
 export class GameService {
     constructor(private prisma: PrismaService) {}
@@ -80,7 +80,7 @@ export class GameService {
         if (alreadyIn)
                 return game;
 
-        const seat = game.players.length;
+        const seat = game.players.length as GameTypes.Seat;
 
         await this.prisma.gamePlayer.create({
             data: {
@@ -93,7 +93,7 @@ export class GameService {
         const newPlayer: GameTypes.Player = {
             userId,
             pseudo,
-            seat: null,
+            seat: seat,
             hand: [],
             isConnected: true,
         }
