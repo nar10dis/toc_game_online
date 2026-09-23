@@ -3,11 +3,23 @@ import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
 import { initGame, addPlayer} from './engine/state';
+
 @Injectable()
 export class GameService {
     constructor(private prisma: PrismaService) {}
 
     private games = new Map<number, GameTypes.Game>();
+    //en attente -> envoie letat du game a tous les clients de la partie.
+    private broadcast?: (game: GameTypes.Game) => void;
+
+    setBroadcaster(fn : (game: GameTypes.Game) => void) {
+        this.broadcast = fn;
+    }
+
+    private commit(game : GameTypes.Game) {
+        this.games.set(game.id, game);
+        this.broadcast?.(game);
+    }
 
     private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -43,32 +55,18 @@ export class GameService {
                 seat: 0
             },
         });
-        const hostPlayer: GameTypes.Player = {
-                userId,
-                pseudo,
-                seat: 0,
-                hand: [],
-                isConnected: true,
-        }
-        const game: GameTypes.Game = {
-                id: dbGame.idGame,
-                inviteCode,
-                phase: 'waiting',
-                players: [hostPlayer],
-                pawns: [],
-                drawPile: [],
-                discardPile: [],
-                currentSeat: 0,
-                winner: null,
-        }
-        // this.createGame.set(game.id, game);
+
+        //MODIFICATION DE GAME.
+        let game: GameTypes.Game = initGame(dbGame.idGame, inviteCode)
+        game = addPlayer(game, userId, pseudo);
+
+        this.commit(game);
 
         return { gameId: game.id, inviteCode };
-
     }
 
     async joinGame(inviteCode: string, userId: number,  pseudo: string) {
-        const game = [...this.games.values()].find(g=>g.inviteCode === inviteCode);
+        let game = [...this.games.values()].find(g=>g.inviteCode === inviteCode);
         if (!game)
             throw new NotFoundException('Invalid invite code');
         if (game.phase !== 'waiting')
@@ -78,7 +76,7 @@ export class GameService {
 
         const alreadyIn = game.players.some(p => p.userId === userId);
         if (alreadyIn)
-                return game;
+            return game;
 
         const seat = game.players.length;
 
@@ -90,15 +88,11 @@ export class GameService {
             },
         });
 
-        const newPlayer: GameTypes.Player = {
-            userId,
-            pseudo,
-            seat: null,
-            hand: [],
-            isConnected: true,
-        }
+        //MODIFICATION DE GAME
+        game = addPlayer(game, userId, pseudo);
 
-        game.players.push(newPlayer);
+        //commit le nouvel etat dans la map.
+        this.commit(game);
 
         return game;
     }
