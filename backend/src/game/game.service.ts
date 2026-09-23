@@ -126,6 +126,7 @@ export class GameService {
             nextSeat++;
         }
 
+        //==> fnct add IA player
         // ==>Lancer game ici
 
         game.phase = 'playing';
