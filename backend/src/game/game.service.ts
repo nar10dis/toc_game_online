@@ -2,13 +2,13 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException } 
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
-
+import { initGame, addPlayer} from './engine/state';
 @Injectable()
 export class GameService {
     constructor(private prisma: PrismaService) {}
-   
+
     private games = new Map<number, GameTypes.Game>();
-   
+
     private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
     private generateInviteCode(): string {
@@ -64,7 +64,7 @@ export class GameService {
         this.games.set(game.id, game);
 
         return { gameId: game.id, inviteCode };
-         
+
     }
 
     async joinGame(inviteCode: string, userId: number,  pseudo: string) {
@@ -75,11 +75,11 @@ export class GameService {
             throw new ConflictException('Game already started');
         if (game.players.length >= 4)
             throw new ConflictException('Room is full, sorry');
-        
+
         const alreadyIn = game.players.some(p => p.userId === userId);
         if (alreadyIn)
                 return game;
-        
+
         const seat = game.players.length;
 
         await this.prisma.gamePlayer.create({

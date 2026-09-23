@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { WornFrame } from "@/components/layout/WornFrame";
 
 /** The big profile card, with the avatar sitting on its top edge. */
-export function ProfileCard({ name = "", email = "" }: { name?: string; email?: string }) {
+export function ProfileCard({ name = "", email = "", bio = "" }: { name?: string; email?: string; bio ?: string}) {
   const initials = name.slice(0, 2).toUpperCase();
 
   return (
@@ -25,6 +25,7 @@ export function ProfileCard({ name = "", email = "" }: { name?: string; email?: 
           <div className="flex w-full max-w-md flex-col gap-6">
             <ProfileInfo label="Pseudo" value={name} />
             <ProfileInfo label="Email" value={email} />
+            <ProfileInfo label="Bio" value={bio} />
           </div>
         </CardContent>
       </WornFrame>

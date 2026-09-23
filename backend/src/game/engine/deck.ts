@@ -1,8 +1,15 @@
-import { Card, CardId, Player } from '../game.types'
+import { Card, CardId, Player, CardValue } from '../game.types'
 import { CARD_VALUES, CARD_COLORS } from '../game.types'
 
 export const PLAYERS_COUNT = 4;
 export const CARDS_PER_HAND = 5;
+
+export function cardValueOf(cardId: CardId): CardValue
+{
+	const [color, value] = cardId.split('_');
+
+	return (Number(value) as CardValue);
+}
 
 export function createDeck(): Card[] {
 
