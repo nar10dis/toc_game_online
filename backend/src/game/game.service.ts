@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException } 
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
-import { initGame, addPlayer} from './engine/state';
+import { initGame, addPlayer, initStartingGame, startRound} from './engine/state';
 
 @Injectable()
 export class GameService {
@@ -57,29 +57,10 @@ export class GameService {
         });
 
         //MODIFICATION DE GAME.
-        let game: GameTypes.Game = initGame(dbGame.idGame, inviteCode)
+        let game: GameTypes.Game = initGame(dbGame.idGame, inviteCode);
         game = addPlayer(game, userId, pseudo);
 
         this.commit(game);
-        const hostPlayer: GameTypes.Player = {
-                userId,
-                pseudo,
-                seat: 0,
-                hand: [],
-                isConnected: true,
-        }
-        const game: GameTypes.Game = {
-                id: dbGame.idGame,
-                inviteCode,
-                phase: 'waiting',
-                players: [hostPlayer],
-                pawns: [],
-                drawPile: [],
-                discardPile: [],
-                currentSeat: 0,
-                winner: null,
-        }
-        this.games.set(game.id, game);
 
         return { gameId: game.id, inviteCode };
     }
@@ -117,7 +98,7 @@ export class GameService {
     }
 
     async startGame(gameId: number, requesterUserId: number) {
-        const game = this.games.get(gameId);
+        let game = this.games.get(gameId);
         if(!game)
             throw new NotFoundException('Game not found');
 
@@ -127,23 +108,8 @@ export class GameService {
         if (game.phase !== 'waiting')
             throw new ConflictException('Game already started');
 
-        let nextSeat = game.players.length as GameTypes.Seat;
-        while (nextSeat < 4) {
-            game.players.push({
-                userId: null,
-                pseudo: `IA ${nextSeat + 1}`,
-                seat: nextSeat,
-                hand: [],
-                isConnected: true,
-            });
-            nextSeat++;
-        }
-
-        //==> fnct add IA player
-        // ==>Lancer game ici
-
-        game.phase = 'playing';
-        this.games.set(gameId, game);
+        game = startRound(initStartingGame(game));
+        this.commit(game);
 
         await this.prisma.game.update({
             where: { idGame: gameId },
@@ -152,5 +118,18 @@ export class GameService {
 
         return game;
     }
+
+    // playAction(/*param de la requete*/) {
+
+    //     let currentPlayer = game.players.find(p => (p.userId === userId));
+
+    //     if (!currentPlayer)
+    //         throw ...;
+    // 	if (game.currentSeat !== currentPlayer?.seat)
+    // 		throw new
+        // playTurn(game, seat, action);
+        //this.commit();
+        //runBots();
+    // }
 
 }

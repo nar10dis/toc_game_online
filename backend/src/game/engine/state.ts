@@ -4,6 +4,7 @@ import { pawnsOf } from "./board";
 import { createDeck, dealCards, isRoundOver, playCard, shuffleDeck } from "./deck";
 import { isLegal } from "./legalMoves";
 import { mod } from "./utils";
+
 //createGame, startRound, nextTurn, checkWinner
 
 export const PAWN_BY_PLAYER = 4;
@@ -56,8 +57,20 @@ function createPawns(players: Player[]) : Pawn[] {
 }
 
 //playing // start
-export function startGame(game: Game): Game {
+export function initStartingGame(game: Game): Game {
 
+	let nextSeat = game.players.length as Seat;
+
+	while (nextSeat < 4) {
+		game.players.push({
+			userId: null,
+			pseudo: `IA ${nextSeat + 1}`,
+			seat: nextSeat,
+			hand: [],
+			isConnected: true,
+		});
+		nextSeat++;
+	}
 	return {...game,
 		currentSeat: 0,
 		winner: null,
@@ -130,20 +143,4 @@ export function nextSeat(game: Game) : Game{
 	return {...game,
 			currentSeat: mod(game.currentSeat + 1, 4) as Seat
 	};
-}
-
-//ce quon recoit du client !
-export function playAction(gameId: number, userId: number, action: GameAction) : Game {
-
-	//recup la partie dans la map;
-	game : Game
-	// traduire useId en seat
-
-	//check si c bien son tour
-
-	// PLAY TURN la current action
-
-	// Play the IA turn (yaura pas dautres requetes jusquau nouveau playAction)
-
-	//return game pour broadcast letat aux joueurs.
 }

@@ -12,18 +12,4 @@ export function chooseAIAction(game: Game, seat: Seat) : GameAction | null {
 	return legalMoves[Math.floor(Math.random() * legalMoves.length)];
 }
 
-// Fait jouer les IA a la suite jusqu'au prochain humain (ou la fin de partie).
-export function playAITurns(game: Game) : Game {
-	while (game.phase === 'playing' && isAI(game.players[game.currentSeat]))
-	{
-		const seat = game.currentSeat;
-		const aiAction = chooseAIAction(game, seat);
-		if (!aiAction)
-			break;
-		const out = playTurn(game, seat, aiAction);
-		if (!out)
-			break; //securite, ne devrait pas arriver
-		game = out.game;
-	}
-	return game;
-}
+//runBots
