@@ -85,3 +85,30 @@ export type GameAction =
   | { type: 'swap'; cardId: CardId; pawnIdA: number; pawnIdB: number }
   | { type: 'split'; cardId: CardId; steps: SplitStep[] }
   | { type: 'discard'; cardId: CardId };
+
+/* ************************************************************************** */
+/*                                 7. RESEAU                                  */
+/* ************************************************************************** */
+// Ce qui vient de se passer, pour que le front sache quoi animer.
+export type GameEvent = {
+  seat: Seat;
+  action: GameAction;
+  captured: Pawn[];
+  newRound: boolean;
+};
+
+// Ce qu'un joueur a le droit de voir : pas la main des autres, pas la pioche.
+export type PlayerView = Omit<Player, 'hand'> & { handCount: number };
+
+export type GameView = Omit<Game, 'players' | 'drawPile'> & {
+  mySeat: Seat;
+  myHand: Card[];
+  players: PlayerView[];
+  drawPileCount: number;
+};
+
+// Le message 'state' envoye a chaque commit.
+export type StateMessage = {
+  state: GameView;
+  event: GameEvent | null;
+};

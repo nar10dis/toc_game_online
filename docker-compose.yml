@@ -50,6 +50,15 @@ services:
     volumes:
       - db_data:/var/lib/postgresql
 
+  elasticsearch:
+    image: 
+  
+  logstash:
+    image:
+  
+  kibana:
+    image:
+      
 
 networks:
   docker-network:

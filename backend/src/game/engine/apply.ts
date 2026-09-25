@@ -78,6 +78,38 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 				captured: hit.captured,
 			});
 		}
+		case 'swap' : {
+			const pawnA : Pawn | null = findPawn(pawns, action.pawnIdA);
+			const pawnB : Pawn | null = findPawn(pawns, action.pawnIdB);
+
+			if ((pawnA === null || pawnA.position.zone !== 'board')
+					|| (pawnB === null || pawnB.position.zone !== 'board'))
+				return ({pawns, captured: []});
+
+			return ({
+				pawns : pawns.map(p => {
+								if (p.id === pawnA.id)
+									return {...p, position: pawnB.position};
+								if (p.id === pawnB.id)
+									return {...p, position: pawnA.position};
+								return p;
+				}),
+				captured: []
+			});
+		}
+		case 'enter' : {
+			const pawn : Pawn | null = findPawn(pawns, action.pawnId);
+
+			if (pawn === null || pawn.position.zone !== 'board')
+				return ({pawns, captured: []});
+
+			const cardValue : CardValue = cardValueOf(action.cardId);
+			const startOfHome = startCell(seat);
+			const target = pawn.position.cell + cardValue;
+
+			// if (mod(pawn.position.cell + cardValue, BOARD_CELLS_COUNT) )
+			}
+
 	}
 	return {pawns, captured: []};
 }

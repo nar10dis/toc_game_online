@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, type Transition } from "motion/react";
 
-import { getCardFrenchLabel, getCardImagePath, type Card } from "@/game/cardDeck";
+import { getCardFrenchLabel, getCardImagePath } from "@/game/cardDeck";
 import {
   CARD_HEIGHT_IN_PIXELS,
   CARD_WIDTH_IN_PIXELS,
@@ -13,11 +13,12 @@ import {
   PLAYED_CARD_TRAVEL,
   getCardOffScreenY,
   getHandCardTransform,
+  getPlayedCardTilt,
   getPlayedCardTransform,
   type CardTransform,
   type TableSize,
 } from "@/game/cardLayout";
-import type { CardOnTable, PlayedCard } from "@/game/usePlayerHand";
+import type { Card, CardId } from "@/game/gameTypes";
 
 /**
  * Paint order of the bottom card of the pile. The pile stacks upwards from
@@ -66,15 +67,15 @@ type SingleCardProps = {
   movementTransition: Transition;
   /** Where the card flies to when it leaves the table. */
   offScreenY: number;
-  /** Plays the card, or `null` when it cannot be played right now. */
-  onPlay: (() => void) | null;
-  /** Called once the card has settled, which releases the next draw. */
-  onArrived: (() => void) | null;
+  /** Raised above the hand: the player picked it and now chooses a pawn. */
+  isSelected: boolean;
+  /** Picks the card, or `null` when it cannot be picked right now. */
+  onClick: (() => void) | null;
 };
 
 /**
  * One card: it deals in from the deck, travels to the middle when played, and
- * falls off the bottom of the screen when the table is cleared.
+ * falls off the bottom of the screen when the pile is shuffled back.
  */
 function SingleCard({
   card,
@@ -82,16 +83,21 @@ function SingleCard({
   stackingOrder,
   movementTransition,
   offScreenY,
-  onPlay,
-  onArrived,
+  isSelected,
+  onClick,
 }: SingleCardProps) {
-  const isPlayable = onPlay !== null;
+  const isClickable = onClick !== null;
+
+  let liftInPixels = 0;
+  if (isSelected) {
+    liftInPixels = -HOVER_LIFT_IN_PIXELS * 2;
+  }
 
   return (
-    //outer element owns the position, inner one the hover lift, so the two
+    //outer element owns the position, inner one the lift, so the two
     //animations never fight over the same transform.
     <motion.div
-      onClick={onPlay ?? undefined}
+      onClick={onClick ?? undefined}
       style={{
         position: "absolute",
         top: 0,
@@ -99,20 +105,19 @@ function SingleCard({
         width: CARD_WIDTH_IN_PIXELS,
         height: CARD_HEIGHT_IN_PIXELS,
         transformOrigin: "bottom center",
-        cursor: isPlayable ? "pointer" : "default",
+        cursor: isClickable ? "pointer" : "default",
         //the table lets clicks through to the pawns, the cards take them back.
         pointerEvents: "auto",
         zIndex: stackingOrder,
       }}
       initial={{ ...DEAL_IN_START_TRANSFORM, opacity: 0 }}
       animate={{ ...targetTransform, opacity: 1 }}
-      //only for "Nouveau paquet": a played card stays on the pile.
       exit={{ y: offScreenY, opacity: 0, transition: CLEAR_TABLE_FALL }}
       transition={movementTransition}
-      onAnimationComplete={onArrived ?? undefined}
     >
       <motion.div
-        whileHover={isPlayable ? { y: -HOVER_LIFT_IN_PIXELS } : undefined}
+        animate={{ y: liftInPixels }}
+        whileHover={isClickable ? { y: liftInPixels - HOVER_LIFT_IN_PIXELS } : undefined}
         style={{ width: "100%", height: "100%" }}
       >
         <Image
@@ -133,30 +138,32 @@ function SingleCard({
 
 /** A card of the table with everything `SingleCard` needs to draw it. */
 type PositionedCard = {
-  cardOnTable: CardOnTable;
+  card: Card;
   targetTransform: CardTransform;
   stackingOrder: number;
   movementTransition: Transition;
-  onPlay: (() => void) | null;
-  onArrived: (() => void) | null;
+  isSelected: boolean;
+  onClick: (() => void) | null;
 };
 
 type CardTableProps = {
-  cardsInHand: CardOnTable[];
-  playedCards: PlayedCard[];
-  /** True while a played card is still travelling to the pile. */
-  isPlayingCard: boolean;
-  onPlayCard: (tableId: number) => void;
-  onPlayedCardArrived: (tableId: number) => void;
+  /** My hand, as the server sent it. */
+  hand: Card[];
+  /** The discard pile, bottom card first. */
+  discardPile: Card[];
+  selectedCardId?: CardId | null;
+  /** False when it is not my turn: the hand cannot be clicked. */
+  canPickCard?: boolean;
+  onCardClick?: (cardId: CardId) => void;
 };
 
 /** Laid over the board: the hand the player holds, and the pile of played cards. */
 export function CardTable({
-  cardsInHand,
-  playedCards,
-  isPlayingCard,
-  onPlayCard,
-  onPlayedCardArrived,
+  hand,
+  discardPile,
+  selectedCardId = null,
+  canPickCard = false,
+  onCardClick = () => {},
 }: CardTableProps) {
   const tableRef = useRef<HTMLDivElement>(null);
   const tableSize = useTableSize(tableRef);
@@ -175,77 +182,54 @@ export function CardTable({
   }
 
   const offScreenY = getCardOffScreenY(tableSize);
-  const topOfPile = playedCards[playedCards.length - 1] ?? null;
 
-  //hand and pile go in ONE flat list: a played card must stay the very same
-  //element as it was in the hand, so it carries on from where it sits instead
-  //of being born again in the corner of the screen.
-  const cardsOnTable: PositionedCard[] = cardsInHand.map(
-    (handCard, positionInHand) => ({
-      cardOnTable: handCard,
-      targetTransform: getHandCardTransform(
-        positionInHand,
-        cardsInHand.length,
-        tableSize,
-      ),
+  const cardsOnTable: PositionedCard[] = hand.map((card, positionInHand) => {
+    let onClick: (() => void) | null = null;
+    if (canPickCard) {
+      onClick = () => onCardClick(card.id);
+    }
+
+    return {
+      card,
+      targetTransform: getHandCardTransform(positionInHand, hand.length, tableSize),
       stackingOrder: positionInHand,
       movementTransition: HAND_CARD_MOVEMENT,
-      //the hand is locked while a card is in flight, so one play always
-      //finishes — and draws its replacement — before the next one starts.
-      onPlay: isPlayingCard ? null : () => onPlayCard(handCard.tableId),
-      onArrived: null,
-    }),
-  );
+      isSelected: card.id === selectedCardId,
+      onClick,
+    };
+  });
 
-  playedCards.forEach((playedCard, positionInPile) => {
+  discardPile.forEach((card, positionInPile) => {
     cardsOnTable.push({
-      cardOnTable: playedCard,
-      targetTransform: getPlayedCardTransform(tableSize, playedCard.tiltInDegrees),
+      card,
+      targetTransform: getPlayedCardTransform(tableSize, getPlayedCardTilt(card.id)),
       stackingOrder: BOTTOM_OF_PILE_STACKING_ORDER + positionInPile,
       movementTransition: PLAYED_CARD_TRAVEL,
-      onPlay: null,
-      //only the top card is still arriving; the ones under it landed long
-      //ago and must not release another draw.
-      onArrived:
-        playedCard.tableId === topOfPile?.tableId
-          ? () => onPlayedCardArrived(playedCard.tableId)
-          : null,
+      isSelected: false,
+      onClick: null,
     });
   });
 
-  //THE fix: drawn in the order they were dealt, never hand-then-pile. A card
-  //keeps its rank among its siblings when it is played — the list only ever
-  //grows at the end, as `tableId` counts up — so React has no reason to move
-  //its element, and moving it is what used to remount the card and replay
-  //`DEAL_IN_START_TRANSFORM`, sending it to the middle from the top-left corner.
-  cardsOnTable.sort(
-    (card, otherCard) => card.cardOnTable.tableId - otherCard.cardOnTable.tableId,
-  );
+  //a played card must stay the very same element as it was in the hand, so it
+  //flies from where it sits. Sorting by id keeps every card at the same rank
+  //among its siblings wherever it is, so React never moves its element.
+  cardsOnTable.sort((card, otherCard) => card.card.id.localeCompare(otherCard.card.id));
 
   return (
     <div ref={tableRef} style={tableStyle}>
       <AnimatePresence>
-        {cardsOnTable.map(
-          ({
-            cardOnTable,
-            targetTransform,
-            stackingOrder,
-            movementTransition,
-            onPlay,
-            onArrived,
-          }) => (
-            <SingleCard
-              key={cardOnTable.tableId}
-              card={cardOnTable.card}
-              targetTransform={targetTransform}
-              stackingOrder={stackingOrder}
-              movementTransition={movementTransition}
-              offScreenY={offScreenY}
-              onPlay={onPlay}
-              onArrived={onArrived}
-            />
-          ),
-        )}
+        {cardsOnTable.map((positionedCard) => (
+          <SingleCard
+            key={positionedCard.card.id}
+            card={positionedCard.card}
+            targetTransform={positionedCard.targetTransform}
+            stackingOrder={positionedCard.stackingOrder}
+            movementTransition={positionedCard.movementTransition}
+            offScreenY={offScreenY}
+            isSelected={positionedCard.isSelected}
+            onClick={positionedCard.onClick}
+          />
+        ))}
       </AnimatePresence>
     </div>
   );

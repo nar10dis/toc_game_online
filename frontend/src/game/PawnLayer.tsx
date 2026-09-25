@@ -3,15 +3,17 @@ import { AnimatePresence } from "motion/react";
 
 import {
   BOARD_SIZE,
+  HOME_CELLS,
   TEAM_COLORS,
   computeCoordsFromIndex,
+  computeHomeCoords,
   computeSpawnCoords,
   getSpawnCellIndex,
   type Point,
 } from "@/game/boardGeometry";
 import { MovePreview } from "@/game/MovePreview";
 import { Pawn } from "@/game/Pawn";
-import { getPawnTravelPath, type Pawn as PawnData } from "@/game/usePawns";
+import { getPawnTravelPath, type BoardPawn as PawnData } from "@/game/boardPawns";
 
 /** No pawn is hovered right now. */
 const NO_PAWN = -1;
@@ -20,13 +22,16 @@ const NO_PAWN = -1;
 /*                                 GEOMETRY                                   */
 /* ************************************************************************** */
 
-/** Where the pawn stands: its cell of the spawn zone, or its cell of the track. */
+/** Where the pawn stands: its cell of the spawn zone, of its home, or of the track. */
 function getPawnPosition(pawn: PawnData, boardSize: number): Point {
   if (pawn.zone === "spawn") {
     return computeSpawnCoords(
       getSpawnCellIndex(pawn.team, pawn.spawnSlot),
       boardSize,
     );
+  }
+  if (pawn.zone === "home") {
+    return computeHomeCoords(pawn.team * HOME_CELLS + pawn.cellIndex, boardSize);
   }
 
   return computeCoordsFromIndex({ index: pawn.cellIndex, boardSize });

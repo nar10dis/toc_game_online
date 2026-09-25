@@ -1,4 +1,4 @@
-import { Game, Pawn, Player, Seat, Card, CardId, HOME_CELLS_COUNT, GameAction} from "../game.types"
+import { Game, Pawn, Player, Seat, Card, CardId, HOME_CELLS_COUNT, GameAction, GameEvent} from "../game.types"
 import { ActionResult, applyAction } from "./apply";
 import { pawnsOf } from "./board";
 import { createDeck, dealCards, isRoundOver, playCard, shuffleDeck } from "./deck";
@@ -97,12 +97,13 @@ export function startRound(game: Game): Game {
 
 }
 
-export function playTurn(game : Game, seat: Seat, action : GameAction): { game: Game, result: ActionResult } | null {
+export function playTurn(game : Game, seat: Seat, action : GameAction): { game: Game, event: GameEvent } | null {
 
 	let currentPlayer : Player = {...game.players[seat]};
 	let newCardState : {hand: Card[], discardPile: Card[]} | null;
 	let result : ActionResult;
 	let winner : Seat | null;
+	let event : GameEvent;
 	//check si laction est leglae
 	if (!isLegal(currentPlayer.hand, game.pawns, seat, action))
 		return null;
@@ -117,14 +118,20 @@ export function playTurn(game : Game, seat: Seat, action : GameAction): { game: 
 			players: game.players.map((p, i) => i === seat ? currentPlayer : p),
 			discardPile: newCardState.discardPile,
 			pawns: result.pawns};
+	//ce qui vient de se passer, pour que le front puisse l'animer
+	event = { seat, action, captured: result.captured, newRound: false };
 	winner = checkWinner(game);
-	if (winner)
-		return {game : {...game, phase: 'finished', winner}, result};
+	//!== null : le siege 0 est falsy
+	if (winner !== null)
+		return {game : {...game, phase: 'finished', winner}, event};
 	game = nextSeat(game);
 	if (isRoundOver(game.players))
+	{
 		game = startRound(game);
+		event.newRound = true;
+	}
 
-	return {game, result};
+	return {game, event};
 }
 
 export function checkWinner(game: Game) : Seat | null {

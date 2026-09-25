@@ -66,7 +66,7 @@ export const PLAYED_CARD_TRAVEL: Transition = {
   ease: [0.22, 1, 0.36, 1],
 };
 
-/** Only for "Nouveau paquet". */
+/** When the discard pile is shuffled back into the deck. */
 export const CLEAR_TABLE_FALL: Transition = {
   duration: 0.45,
   ease: [0.55, 0, 1, 0.45],
@@ -113,9 +113,13 @@ export function getHandCardTransform(
   };
 }
 
-//random = one time -> so that react doesnt re-render everytime.
-export function pickRandomPlayedCardTilt(): number {
-  return (Math.random() * 2 - 1) * PLAYED_CARD_MAX_TILT;
+//same card, same tilt: computed from its id so it never jiggles on re-render.
+export function getPlayedCardTilt(cardId: string): number {
+  let hash = 0;
+  for (let i = 0; i < cardId.length; i++) {
+    hash = (hash * 31 + cardId.charCodeAt(i)) % 1000;
+  }
+  return (hash / 1000 * 2 - 1) * PLAYED_CARD_MAX_TILT;
 }
 
 export function getPlayedCardTransform(

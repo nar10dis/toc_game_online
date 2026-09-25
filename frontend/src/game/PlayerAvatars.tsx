@@ -43,7 +43,7 @@ const NAME_FONT_SIZE = 50;
 /** Gap between the top of the picture and the baseline of the name. */
 const NAME_GAP = 12;
 
-const DEFAULT_PLAYER_NAMES = ["Player 1", "Player 2", "Player 3"];
+const DEFAULT_PLAYER_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4"];
 
 /* ************************************************************************** */
 /*                                 REACT FUNC                                 */
@@ -52,7 +52,7 @@ const DEFAULT_PLAYER_NAMES = ["Player 1", "Player 2", "Player 3"];
 type PlayerAvatarsProps = {
   /** Its picture is not drawn — that player is the one holding the cards. */
   playerTeam?: number;
-  /** Names of the other players, in the order they sit around the board. */
+  /** Names of all the players, indexed by seat. */
   playerNames?: string[];
   /** Must match the `boardSize` of the `Board` these are drawn in. */
   boardSize?: number;
@@ -106,7 +106,7 @@ export function PlayerAvatars({
         })}
       </defs>
 
-      {shownTeams.map((team, seat) => {
+      {shownTeams.map((team) => {
         const { x, y } = computeAvatarCoords(team, boardSize);
         const color = TEAM_COLORS[team];
 
@@ -125,7 +125,7 @@ export function PlayerAvatars({
               fill={color}
               fontSize={NAME_FONT_SIZE}
             >
-              {playerNames[seat]}
+              {playerNames[team]}
             </text>
 
             <path

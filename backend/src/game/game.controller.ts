@@ -1,6 +1,6 @@
 import { GameService } from './game.service';
 import { AuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Controller, UseGuards, Get, Post, Body, Patch, Param, Delete, Req, Res } from '@nestjs/common';
+import { Controller, UseGuards, Get, Post, Body, Patch, Param, Delete, Req, Res, ParseIntPipe} from '@nestjs/common';
 import { CurrentUser, type JwtPayload } from 'src/auth/decorators/current-user.decorator';
 
 @Controller('game')
@@ -17,14 +17,13 @@ export class GameController {
     @Post('join/:inviteCode')
     joinGame(@Param('inviteCode') inviteCode: string ,@CurrentUser() user: JwtPayload) {
         return this.gameService.joinGame(inviteCode, user.sub, user.username);
-    }
-    
+    } 
 
     @UseGuards(AuthGuard)
     @Post(':gameId/start')
-    startGame(@Param('gameId') gameId: number, @CurrentUser() user: JwtPayload) {
+    // ParseIntPipe : sinon gameId est une string et games.get() ne trouve rien
+    startGame(@Param('gameId', ParseIntPipe) gameId: number, @CurrentUser() user: JwtPayload) {
         return this.gameService.startGame(gameId, user.sub)
     }
 
-    
 }
