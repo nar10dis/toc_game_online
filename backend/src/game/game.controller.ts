@@ -1,6 +1,6 @@
 import { GameService } from './game.service';
 import { AuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Controller, UseGuards, Get, Post, Body, Patch, Param, Delete, Req, Res } from '@nestjs/common';
+import { Controller, UseGuards, Get, Post, Body, Patch, Param, Delete, Req, Res, ParseIntPipe } from '@nestjs/common';
 
 @Controller('game')
 export class GameController {
@@ -22,7 +22,8 @@ export class GameController {
 
     @UseGuards(AuthGuard)
     @Post('start/:gameId')
-    startGame(@Param('gameId') gameId: number, @Req() req: Request) {
+    // ParseIntPipe : sinon gameId est une string et games.get() ne trouve rien
+    startGame(@Param('gameId', ParseIntPipe) gameId: number, @Req() req: Request) {
         const requesterUserId = (req as any).user;
         return this.gameService.startGame(gameId, requesterUserId.sub)
     }

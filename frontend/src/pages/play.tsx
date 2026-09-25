@@ -1,50 +1,61 @@
 import { CardTable } from "@/game/CardTable";
-import { usePlayerHand } from "@/game/usePlayerHand";
-import { getCardMoveDistance } from "@/game/cardDeck";
 import { PawnLayer } from "@/game/PawnLayer";
 import { PlayerAvatars } from "@/game/PlayerAvatars";
-import { usePawns } from "@/game/usePawns";
+import { TurnControls } from "@/game/TurnControls";
+import { toBoardPawns } from "@/game/boardPawns";
+import { useGame } from "@/game/useGame";
+import { useTurnChoice } from "@/game/useTurnChoice";
 import { Header } from "@/components/layout/Header";
 import { paperStyle } from "@/lib/paperStyle";
 
 import { Board } from "@/components/game/Board";
 
 export default function Play() {
-  const {
-    cardsInHand,
-    playedCards,
-    isPlayingCard,
-    isDeckEmpty,
-    playCard,
-    finishPlayingCard,
-    startNewDeckAndDealAgain,
-  } = usePlayerHand();
+  const { game, lastEvent, hasNoGame, sendAction } = useGame();
+  const turnChoice = useTurnChoice(game, sendAction);
 
-  const {
-    pawns,
-    pendingMoveDistance,
-    selectablePawnIds,
-    playCardOnPawns,
-    choosePawn,
-    finishPawnMove,
-    resetPawns,
-  } = usePawns();
-
-  const isChoosingPawn = pendingMoveDistance > 0;
-
-  function handlePlayCard(tableId: number) {
-    const cardBeingPlayed = cardsInHand.find(
-      (handCard) => handCard.tableId === tableId,
-    );
-    if (!cardBeingPlayed) return;
-
-    playCard(tableId);
-    playCardOnPawns(getCardMoveDistance(cardBeingPlayed.card));
+  let content = <h2 className="text-xl">Connexion...</h2>;
+  if (hasNoGame) {
+    content = <h2 className="text-xl">Tu n&apos;es dans aucune partie.</h2>;
   }
 
-  function handleNewDeck() {
-    startNewDeckAndDealAgain();
-    resetPawns();
+  if (game) {
+    const isMyTurn = game.phase === "playing" && game.currentSeat === game.mySeat;
+    const playerNames = game.players.map((player) => player.pseudo);
+
+    // the dotted preview only makes sense for a plain move
+    let previewDistance = 0;
+    if (turnChoice.playMode === "move") {
+      previewDistance = turnChoice.selectedCardValue;
+    }
+
+    content = (
+      <>
+        <TurnControls game={game} turnChoice={turnChoice} />
+
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          {/* the cards sit inside the same box as the board, so they scroll and zoom with it */}
+          <div style={{ position: "relative" }}>
+            <Board>
+              <PlayerAvatars playerNames={playerNames} />
+              <PawnLayer
+                pawns={toBoardPawns(game.pawns, lastEvent)}
+                selectablePawnIds={turnChoice.selectablePawnIds}
+                moveDistance={previewDistance}
+                onPawnClick={turnChoice.handlePawnClick}
+              />
+            </Board>
+            <CardTable
+              hand={game.myHand}
+              discardPile={game.discardPile}
+              selectedCardId={turnChoice.selectedCardId}
+              canPickCard={isMyTurn}
+              onCardClick={turnChoice.handleCardClick}
+            />
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -59,58 +70,21 @@ export default function Play() {
       }}
     >
       <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-
-            background: `
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          background: `
         radial-gradient(
           ellipse at center,
           transparent 55%,
           rgba(60, 45, 30, 0.035) 100%
         )
       `,
-          }}
+        }}
       />
       <Header />
-      <button onClick={handleNewDeck} className="text-base font-bold">
-        Nouveau paquet
-      </button>
-
-      {isDeckEmpty && <h1 className="text-3xl">Deck is empty!</h1>}
-
-      {isChoosingPawn && (
-        <h2 className="text-xl">Choisis un pion à faire avancer de {pendingMoveDistance} cases</h2>
-      )}
-
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}>
-        {/* the cards sit inside the same box as the board, so they scroll and zoom with it */}
-        <div style={{ position: "relative" }}>
-          <Board>
-            <PlayerAvatars />
-            <PawnLayer
-                pawns={pawns}
-                selectablePawnIds={selectablePawnIds}
-                moveDistance={pendingMoveDistance}
-                onPawnClick={choosePawn}
-                onPawnArrived={finishPawnMove}
-            />
-          </Board>
-          <CardTable
-              cardsInHand={cardsInHand}
-              playedCards={playedCards}
-              //the hand also waits while the player picks the pawn to move.
-              isPlayingCard={isPlayingCard || isChoosingPawn}
-              onPlayCard={handlePlayCard}
-              onPlayedCardArrived={finishPlayingCard}
-          />
-        </div>
-      </div>
+      {content}
     </main>
   );
 }

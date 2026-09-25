@@ -1,24 +1,40 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
-import { initGame, addPlayer, initStartingGame, startRound} from './engine/state';
+import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './engine/state';
+import { chooseAIAction } from './engine/AI';
+
+// Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
+const BOT_DELAY_MS = 1000;
 
 @Injectable()
 export class GameService {
     constructor(private prisma: PrismaService) {}
 
     private games = new Map<number, GameTypes.Game>();
-    //en attente -> envoie letat du game a tous les clients de la partie.
-    private broadcast?: (game: GameTypes.Game) => void;
+    // donne par la gateway -> envoie letat du game a tous les clients de la partie.
+    private broadcast?: (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void;
 
-    setBroadcaster(fn : (game: GameTypes.Game) => void) {
+    setBroadcaster(fn : (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void) {
         this.broadcast = fn;
     }
 
-    private commit(game : GameTypes.Game) {
+    // set + broadcast : le serveur s'en souvient ET les joueurs le voient.
+    private commit(game : GameTypes.Game, event: GameTypes.GameEvent | null = null) {
         this.games.set(game.id, game);
-        this.broadcast?.(game);
+        this.broadcast?.(game, event);
+    }
+
+    // La partie la plus recente du joueur (pour la resynchro d'un client).
+    findGameOfUser(userId: number): GameTypes.Game | null {
+        let found: GameTypes.Game | null = null;
+
+        for (const game of this.games.values()) {
+            if (game.players.some(p => p.userId === userId))
+                found = game;
+        }
+        return found;
     }
 
     private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -75,8 +91,9 @@ export class GameService {
             throw new ConflictException('Room is full, sorry');
 
         const alreadyIn = game.players.some(p => p.userId === userId);
+        // on ne renvoie jamais la Game entiere : l'etat passe par le websocket (viewFor)
         if (alreadyIn)
-            return game;
+            return { gameId: game.id, inviteCode };
 
         const seat = game.players.length as GameTypes.Seat;
 
@@ -94,7 +111,7 @@ export class GameService {
         //commit le nouvel etat dans la map.
         this.commit(game);
 
-        return game;
+        return { gameId: game.id, inviteCode };
     }
 
     async startGame(gameId: number, requesterUserId: number) {
@@ -116,20 +133,48 @@ export class GameService {
             data: { phase: 'playing' },
         });
 
-        return game;
+        // le siege 0 est toujours un humain (l'hote), mais au cas ou.
+        void this.runBots(gameId);
+
+        return { gameId };
     }
 
-    // playAction(/*param de la requete*/) {
+    playAction(gameId: number, userId: number, action: GameTypes.GameAction) {
+        const game = this.games.get(gameId);
+        if (!game)
+            throw new NotFoundException('Game not found');
+        if (game.phase !== 'playing')
+            throw new ConflictException('Game is not running');
 
-    //     let currentPlayer = game.players.find(p => (p.userId === userId));
+        const player = game.players.find(p => p.userId === userId);
+        if (!player)
+            throw new ForbiddenException('You are not in this game');
+        // ce check sert aussi de verrou pendant que les bots jouent
+        if (game.currentSeat !== player.seat)
+            throw new ConflictException('Not your turn');
 
-    //     if (!currentPlayer)
-    //         throw ...;
-    // 	if (game.currentSeat !== currentPlayer?.seat)
-    // 		throw new
-        // playTurn(game, seat, action);
-        //this.commit();
-        //runBots();
-    // }
+        const out = playTurn(game, player.seat, action);
+        if (!out)
+            throw new BadRequestException('Illegal move');
 
+        this.commit(out.game, out.event);
+        // pas de await : on repond tout de suite, les bots jouent en fond
+        void this.runBots(gameId);
+    }
+
+    // Fait jouer les bots tant que c'est a eux, un commit par coup.
+    private async runBots(gameId: number) {
+        let game = this.games.get(gameId);
+
+        while (game && game.phase === 'playing' && GameTypes.isAI(game.players[game.currentSeat])) {
+            await new Promise(resolve => setTimeout(resolve, BOT_DELAY_MS));
+            const seat = game.currentSeat;
+            const action = chooseAIAction(game, seat);
+            const out = action && playTurn(game, seat, action);
+            if (!out)
+                break;
+            game = out.game;
+            this.commit(game, out.event);
+        }
+    }
 }
