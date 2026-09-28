@@ -43,6 +43,7 @@ services:
 
   postgres:
     image: postgres:18.4-alpine3.24
+    container_name: postgres
     env_file:
       - .env
     networks:
@@ -51,13 +52,54 @@ services:
       - db_data:/var/lib/postgresql
 
   elasticsearch:
-    image: 
-  
-  logstash:
-    image:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - docker-network
   
   kibana:
-    image:
+    image: docker.elastic.co/kibana/kibana:9.5.4
+    container_name: kibana
+    environnement:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elastisearch
+    networks:
+      - docker-network
+  
+  logstash:
+    image: docker.elastic.co/logstash/logstash:9.5.4
+    container_name: logstash
+    volumes: 
+    - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+    - elasticsearch
+    networks:
+    - docker-network
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:9.5.4
+    container_name: filebeat
+    user: root
+    volumes:
+    - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+    - logstash
+    networks:
+    - docker-network
+
       
 
 networks:
@@ -66,3 +108,4 @@ networks:
 
 volumes:
   db_data:
+  es-data:
