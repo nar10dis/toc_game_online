@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { motion } from "motion/react";
 
 import {
@@ -10,12 +10,33 @@ import {
   TEAM_COLORS,
   TEAMS_NUMBER,
   TOTAL_CELLS,
+  armOfSeat,
   computeCoordsFromIndex,
   computeHomeCoords,
   computeSpawnCoords,
   getSeatOfStartCell,
 } from "@/game/boardGeometry";
 import { handDrawnCirclePath } from "@/game/handDrawn";
+
+/** The arm drawn at the bottom of the screen, before any rotation. */
+const BOTTOM_ARM = 2;
+
+/**
+ * The whole board is turned so the viewer's seat lands at the bottom. What must
+ * stay readable (numbers, names, pictures) turns back by this many degrees.
+ */
+const BoardRotationContext = createContext(0);
+
+/** Degrees the board is turned by — rotate a child by minus this to keep it upright. */
+export function useBoardRotation(): number {
+  return useContext(BoardRotationContext);
+}
+
+/** Quarter-turns (clockwise) that bring the arm of `seat` to the bottom. */
+function rotationForSeat(seat: number): number {
+  const quarters = (BOTTOM_ARM - armOfSeat(seat) + TEAMS_NUMBER) % TEAMS_NUMBER;
+  return quarters * 90;
+}
 
 /** How long the pen takes to draw one cell. */
 const DRAW_DURATION = 0.18;
@@ -71,21 +92,25 @@ function CellIndex({
   label: string;
   delay: number;
 }) {
+  const rotation = useBoardRotation();
+
   return (
-    <motion.text
-      x={x}
-      y={y}
-      className="font-body"
-      fill="var(--foreground)"
-      fontSize={INDEX_FONT_SIZE}
-      textAnchor="middle"
-      dominantBaseline="central"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.7 }}
-      transition={{ delay, duration: 0.2 }}
-    >
-      {label}
-    </motion.text>
+    <g transform={`rotate(${-rotation} ${x} ${y})`}>
+      <motion.text
+        x={x}
+        y={y}
+        className="font-body"
+        fill="var(--foreground)"
+        fontSize={INDEX_FONT_SIZE}
+        textAnchor="middle"
+        dominantBaseline="central"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.7 }}
+        transition={{ delay, duration: 0.2 }}
+      >
+        {label}
+      </motion.text>
+    </g>
   );
 }
 
@@ -93,6 +118,8 @@ type BoardProps = {
   boardSize?: number;
   /** Writes the index of every cell inside it — handy to check the geometry. */
   showIndexes?: boolean;
+  /** The viewer's seat, drawn at the bottom. Seat 3 sits there when unturned. */
+  bottomSeat?: number;
   /** Drawn on top of the board, in board coordinates — the pawns go here. */
   children?: ReactNode;
 };
@@ -100,8 +127,11 @@ type BoardProps = {
 export function Board({
   boardSize = BOARD_SIZE,
   showIndexes = true,
+  bottomSeat = 3,
   children,
 }: BoardProps) {
+  const rotation = rotationForSeat(bottomSeat);
+  const center = boardSize / 2;
   const cells = Array.from({ length: TOTAL_CELLS }, (_, i) => i);
 
   const homeCells = Array.from({ length: TEAMS_NUMBER * HOME_CELLS }, (_, i) => i);
@@ -113,7 +143,7 @@ export function Board({
   return (
     <svg
       viewBox={`0 0 ${boardSize} ${boardSize}`}
-      style={{ width: "90vmin", height: "auto", display: "block" }}
+      style={{ width: "100%", height: "100%", display: "block" }}
     >
       <defs>
         <filter id="handDrawn">
@@ -127,108 +157,112 @@ export function Board({
         </filter>
       </defs>
 
-      {cells.map((i) => {
-        const { x, y } = computeCoordsFromIndex({ index: i, boardSize });
-        const path = handDrawnCirclePath(x, y, CELL_RADIUS, i);
-        const timing = timings[i];
+      <BoardRotationContext.Provider value={rotation}>
+        <g transform={`rotate(${rotation} ${center} ${center})`}>
+          {cells.map((i) => {
+            const { x, y } = computeCoordsFromIndex({ index: i, boardSize });
+            const path = handDrawnCirclePath(x, y, CELL_RADIUS, i);
+            const timing = timings[i];
 
-        //a start cell wears the colour of the seat that comes out on it.
-        const startCellSeat = getSeatOfStartCell(i);
-        const isStartCell = startCellSeat >= 0;
-        const color = isStartCell ? TEAM_COLORS[startCellSeat] : "var(--foreground)";
+            //a start cell wears the colour of the seat that comes out on it.
+            const startCellSeat = getSeatOfStartCell(i);
+            const isStartCell = startCellSeat >= 0;
+            const color = isStartCell ? TEAM_COLORS[startCellSeat] : "var(--foreground)";
 
-        return (
-          <g key={`cell-${i}`}>
-            <motion.path
-              d={path}
-              fill={color}
-              fillOpacity={isStartCell ? 0.3 : 0}
-              stroke={color}
-              strokeWidth={isStartCell ? 7 : 5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.9 }}
-              transition={{ delay: timing.delay, duration: timing.duration }}
-            />
+            return (
+              <g key={`cell-${i}`}>
+                <motion.path
+                  d={path}
+                  fill={color}
+                  fillOpacity={isStartCell ? 0.3 : 0}
+                  stroke={color}
+                  strokeWidth={isStartCell ? 7 : 5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 0.9 }}
+                  transition={{ delay: timing.delay, duration: timing.duration }}
+                />
 
-            {showIndexes && (
-              <CellIndex
-                x={x}
-                y={y}
-                label={String(i)}
-                delay={timing.delay + timing.duration}
+                {showIndexes && (
+                  <CellIndex
+                    x={x}
+                    y={y}
+                    label={String(i)}
+                    delay={timing.delay + timing.duration}
+                  />
+                )}
+            </g>
+          );
+        })}
+
+        {/* FOUR HOME PATHS */}
+        {homeCells.map((i) => {
+          const { x, y } = computeHomeCoords(i, boardSize);
+
+          const seat = Math.floor(i / HOME_CELLS);
+          const color = TEAM_COLORS[seat];
+
+          const path = handDrawnCirclePath(x, y, CELL_RADIUS, 1000 + i);
+
+          return (
+            <g key={`home-${i}`}>
+              <motion.path
+                d={path}
+                fill={color}
+                fillOpacity={0.22}
+                stroke={color}
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.9 }}
+                transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
               />
-            )}
-          </g>
-        );
-      })}
 
-      {/* FOUR HOME PATHS */}
-      {homeCells.map((i) => {
-        const { x, y } = computeHomeCoords(i, boardSize);
+              {/* prefixed, because homes have their own numbering */}
+              {showIndexes && (
+                <CellIndex x={x} y={y} label={`H${i}`} delay={i * 0.08 + 0.25} />
+              )}
+            </g>
+          );
+        })}
 
-        const seat = Math.floor(i / HOME_CELLS);
-        const color = TEAM_COLORS[seat];
+        {/* FOUR SPAWNS */}
+        {spawnCells.map((i) => {
+          const { x, y } = computeSpawnCoords(i, boardSize);
 
-        const path = handDrawnCirclePath(x, y, CELL_RADIUS, 1000 + i);
+          const seat = Math.floor(i / SPAWN_CELLS);
+          const color = TEAM_COLORS[seat];
 
-        return (
-          <g key={`home-${i}`}>
-            <motion.path
-              d={path}
-              fill={color}
-              fillOpacity={0.22}
-              stroke={color}
-              strokeWidth={5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.9 }}
-              transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
-            />
+          const path = handDrawnCirclePath(x, y, CELL_RADIUS, 2000 + i);
 
-            {/* prefixed, because homes have their own numbering */}
-            {showIndexes && (
-              <CellIndex x={x} y={y} label={`H${i}`} delay={i * 0.08 + 0.25} />
-            )}
-          </g>
-        );
-      })}
+          return (
+            <g key={`spawn-${i}`}>
+              <motion.path
+                d={path}
+                fill={color}
+                fillOpacity={0.18}
+                stroke={color}
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.9 }}
+                transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
+              />
 
-      {/* FOUR SPAWNS */}
-      {spawnCells.map((i) => {
-        const { x, y } = computeSpawnCoords(i, boardSize);
+              {/* prefixed, because spawns have their own numbering */}
+              {showIndexes && (
+                <CellIndex x={x} y={y} label={`S${i}`} delay={i * 0.08 + 0.25} />
+              )}
+            </g>
+          );
+        })}
 
-        const seat = Math.floor(i / SPAWN_CELLS);
-        const color = TEAM_COLORS[seat];
-
-        const path = handDrawnCirclePath(x, y, CELL_RADIUS, 2000 + i);
-
-        return (
-          <g key={`spawn-${i}`}>
-            <motion.path
-              d={path}
-              fill={color}
-              fillOpacity={0.18}
-              stroke={color}
-              strokeWidth={5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.9 }}
-              transition={{ delay: i * 0.08, duration: 0.25, ease: "easeOut" }}
-            />
-
-            {/* prefixed, because spawns have their own numbering */}
-            {showIndexes && (
-              <CellIndex x={x} y={y} label={`S${i}`} delay={i * 0.08 + 0.25} />
-            )}
-          </g>
-        );
-      })}
-
-      {children}
+        {children}
+        </g>
+      </BoardRotationContext.Provider>
     </svg>
   );
 }

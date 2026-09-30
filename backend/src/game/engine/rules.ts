@@ -88,15 +88,18 @@ export function canSwap(pawns: Pawn[], card: Card, pawnA: Pawn, pawnB: Pawn) : b
 
 //permise si cette carte ne permet aucun coup.
 export function canDiscard(pawns: Pawn[], card: Card, seat: Seat) : boolean {
+	//le valet ne fait qu'echanger : seul un echange l'empeche d'etre defausse
+	const isJack = card.value === 11;
+
 	for (const pawn of pawnsOf(pawns, seat))
 	{
 			if (canExit(pawns, card, pawn))
 				return false;
-			if (canMove(pawns, realValueOf(card), pawn))
+			if (!isJack && canMove(pawns, realValueOf(card), pawn))
 				return false;
-			if (canGoHome(pawns, realValueOf(card), pawn))
+			if (!isJack && canGoHome(pawns, realValueOf(card), pawn))
 				return false;
-			if (canMoveInHome(pawns, realValueOf(card), pawn))
+			if (!isJack && canMoveInHome(pawns, realValueOf(card), pawn))
 				return false;
 			for (const other of pawns)
 			{

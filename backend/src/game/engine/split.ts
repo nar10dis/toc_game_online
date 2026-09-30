@@ -65,32 +65,8 @@ export function simulateSplitStep(pawns: Pawn[], pawn: Pawn, steps: number, ente
 	});
 }
 
-// Peut-on encore jouer les `left` pas qui restent ? (recursif)
-// On essaie chaque pion, chaque nombre de pas, en move puis en enter,
-// et on recommence sur le plateau d'apres avec ce qui reste.
-export function canFinishSplit(pawns: Pawn[], seat: Seat, left: number) : boolean {
-
-	if (left === 0)
-		return true;
-
-	for (const pawn of pawnsOf(pawns, seat))
-	{
-		for (let steps = 1; steps <= left; steps++)
-		{
-			for (const enter of [false, true])
-			{
-				const after = simulateSplitStep(pawns, pawn, steps, enter);
-
-				if (after !== null && canFinishSplit(after.pawns, seat, left - steps))
-					return true;
-			}
-		}
-	}
-	return false;
-}
-
-// Les morceaux jouables maintenant. On garde seulement ceux qui
-// permettent de finir le 7 : le joueur ne peut jamais se bloquer.
+// Les morceaux jouables maintenant. Le 7 n'a pas besoin d'etre fini :
+// si plus rien n'est jouable, les pas qui restent sont perdus (voir playTurn).
 export function getSplitSteps(pawns: Pawn[], seat: Seat, cardId: CardId, left: number) : GameAction[] {
 	const splitSteps : GameAction[] = [];
 
@@ -102,7 +78,7 @@ export function getSplitSteps(pawns: Pawn[], seat: Seat, cardId: CardId, left: n
 			{
 				const after = simulateSplitStep(pawns, pawn, steps, enter);
 
-				if (after !== null && canFinishSplit(after.pawns, seat, left - steps))
+				if (after !== null)
 					splitSteps.push({type: 'split', cardId, pawnId: pawn.id, steps, enter});
 			}
 		}

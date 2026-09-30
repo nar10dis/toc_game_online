@@ -10,7 +10,7 @@ import {
   getTravelPath,
 } from "@/game/boardGeometry";
 import { getCardValueFromId } from "@/game/cardDeck";
-import type { GameEvent, Pawn } from "@/game/gameTypes";
+import type { GameEvent, Pawn, PawnPosition } from "@/game/gameTypes";
 
 /* ************************************************************************** */
 /*                                 TYPES DEF                                  */
@@ -27,6 +27,8 @@ export type BoardPawn = {
   cellIndex: number;
   /** Cells it is walking through right now. Empty while it stands still. */
   travelPath: number[];
+  /** Set when it was just captured: where it died, and after how many hops of the killer. */
+  death: { cellIndex: number; afterSteps: number } | null;
 };
 
 /* ************************************************************************** */
@@ -51,7 +53,9 @@ function getLastTravelPath(pawn: Pawn, lastEvent: GameEvent | null): number[] {
     return [pawn.position.cell];
   }
   if (action.type === "move" && action.pawnId === pawn.id) {
-    const steps = getCardValueFromId(action.cardId);
+    let steps = getCardValueFromId(action.cardId);
+    // the 4 goes backward, like on the server (realValueOf)
+    if (steps === 4) steps = -4;
     // walk back from where it landed to find where it started
     const startCell = mod(pawn.position.cell - steps, TOTAL_CELLS);
     return getTravelPath(startCell, steps);
@@ -64,7 +68,29 @@ function getLastTravelPath(pawn: Pawn, lastEvent: GameEvent | null): number[] {
   return [];
 }
 
+/**
+ * A pawn captured by the last event waits on its cell until the killer lands
+ * there (or walks over it, for the 7), then dies.
+ */
+function getDeath(pawn: Pawn, lastEvent: GameEvent | null, killerPath: number[]): BoardPawn["death"] {
+  const victim = lastEvent?.captured.find((captured) => captured.id === pawn.id);
+  if (!victim || victim.position.zone !== "board") return null;
+
+  const cellIndex = victim.position.cell;
+  // the hop that reaches its cell; 0 when the killer does not walk (it dies at once)
+  const afterSteps = killerPath.indexOf(cellIndex) + 1;
+
+  return { cellIndex, afterSteps };
+}
+
 export function toBoardPawns(pawns: Pawn[], lastEvent: GameEvent | null): BoardPawn[] {
+  // the pawn that just moved: its walk sets when its victims die
+  let killerPath: number[] = [];
+  for (const pawn of pawns) {
+    const path = getLastTravelPath(pawn, lastEvent);
+    if (path.length > 0) killerPath = path;
+  }
+
   return pawns.map((pawn) => {
     let cellIndex = 0;
     if (pawn.position.zone !== "spawn") {
@@ -79,17 +105,51 @@ export function toBoardPawns(pawns: Pawn[], lastEvent: GameEvent | null): BoardP
       spawnSlot: pawn.id % PAWNS_PER_TEAM,
       cellIndex,
       travelPath: getLastTravelPath(pawn, lastEvent),
+      death: getDeath(pawn, lastEvent, killerPath),
     };
   });
 }
 
-/**
- * Cells the pawn would walk over if the card were played on it, the arrival
- * last. Used for the dotted preview on hover.
- */
-export function getPawnTravelPath(pawn: BoardPawn, moveDistance: number): number[] {
-  if (pawn.zone === "spawn") return [getStartCellIndex(pawn.team)];
-  if (pawn.zone === "home") return [];
+/** A seat's home opens onto the track this many cells before its start cell. */
+const HOME_DOOR_OFFSET = 3;
 
-  return getTravelPath(pawn.cellIndex, moveDistance);
+/**
+ * Cells the pawn walks over to reach `to`, the arrival last. Used for the
+ * dotted preview on hover. `isBackward` is for the 4.
+ */
+export function getPreviewPath(
+  pawn: BoardPawn,
+  to: PawnPosition,
+  isBackward: boolean,
+): PawnPosition[] {
+  if (to.zone === "spawn") return [];
+  if (pawn.zone === "spawn") return [to];
+
+  const path: PawnPosition[] = [];
+
+  if (pawn.zone === "home") {
+    for (let cell = pawn.cellIndex + 1; cell <= to.cell; cell++) {
+      path.push({ zone: "home", cell });
+    }
+    return path;
+  }
+
+  // along the track, up to the arrival, or up to the door of the home
+  const door = mod(getStartCellIndex(pawn.team) - HOME_DOOR_OFFSET, TOTAL_CELLS);
+  const lastTrackCell = to.zone === "board" ? to.cell : door;
+  const direction = isBackward ? -1 : 1;
+
+  let cell = pawn.cellIndex;
+  while (cell !== lastTrackCell) {
+    cell = mod(cell + direction, TOTAL_CELLS);
+    path.push({ zone: "board", cell });
+  }
+
+  // then through the door, into the home
+  if (to.zone === "home") {
+    for (let homeCell = 0; homeCell <= to.cell; homeCell++) {
+      path.push({ zone: "home", cell: homeCell });
+    }
+  }
+  return path;
 }

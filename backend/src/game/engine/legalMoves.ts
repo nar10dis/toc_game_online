@@ -42,11 +42,14 @@ export function getLegalActions(hand : Card[], pawns: Pawn[], seat: Seat, pendin
 				legalMoves.push({type: 'discard', cardId: card.id});
 			continue;
 		}
+		//le valet sert seulement a echanger : il n'avance jamais
+		const isJack = card.value === 11;
+
 		for (const pawn of myPawns)
 		{
-			if (Rules.canMove(pawns, realValueOf(card), pawn) || Rules.canMoveInHome(pawns, realValueOf(card), pawn))
+			if (!isJack && (Rules.canMove(pawns, realValueOf(card), pawn) || Rules.canMoveInHome(pawns, realValueOf(card), pawn)))
 				legalMoves.push({type: 'move', cardId: card.id, pawnId: pawn.id});
-			if (Rules.canGoHome(pawns, realValueOf(card), pawn))
+			if (!isJack && Rules.canGoHome(pawns, realValueOf(card), pawn))
 				legalMoves.push({type: 'enter', cardId: card.id, pawnId:pawn.id});
 			if (Rules.canExit(pawns, card, pawn))
 				legalMoves.push({type: 'exit', cardId: card.id, pawnId: pawn.id});

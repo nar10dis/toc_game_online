@@ -38,6 +38,13 @@ export type PlayerView = {
   handCount: number;
 };
 
+/** A move I may play, and the cell it puts my pawn on. */
+export type LegalMove = {
+  action: GameAction;
+  /** null for a swap or a discard: there is no cell to show. */
+  to: PawnPosition | null;
+};
+
 /** The game as the server lets ME see it: only my hand, no draw pile. */
 export type GameView = {
   id: number;
@@ -53,6 +60,8 @@ export type GameView = {
   mySeat: Seat;
   myHand: Card[];
   drawPileCount: number;
+  /** Empty when it is not my turn. */
+  legalMoves: LegalMove[];
 };
 
 export type GameAction =

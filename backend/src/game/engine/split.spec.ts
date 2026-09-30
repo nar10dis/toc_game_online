@@ -1,7 +1,7 @@
 import { Card, Game, Pawn, Player, Seat } from '../game.types';
 import { chooseAIAction } from './AI';
 import { getLegalActions } from './legalMoves';
-import { canFinishSplit, getSplitSteps } from './split';
+import { getSplitSteps } from './split';
 import { playTurn } from './state';
 
 const SEVEN: Card = { id: 'heart_7', color: 'heart', value: 7 };
@@ -95,10 +95,10 @@ describe('le 7 (split)', () => {
     expect(out.game.pendingSplit).toEqual({ cardId: 'heart_7', left: 2 });
   });
 
-  it('ne propose pas un morceau qui menerait a un blocage', () => {
+  it('propose un morceau meme si le reste ne pourra pas etre joue', () => {
     // pion 0 a la maison case 0, case 3 occupee : 2 pas maximum.
     // pion 1 en case 16 : bloque des 2 pas par le pion du siege 1 sur sa sortie (18).
-    // Au total on peut faire 3 pas maximum, jamais 7.
+    // On ne peut pas faire les 7 pas, mais les petits morceaux sont proposes.
     const pawns = [
       { id: 0, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 0 } },
       { id: 3, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 3 } },
@@ -107,13 +107,42 @@ describe('le 7 (split)', () => {
       onBoard(4, 1, 18),
     ];
 
-    expect(canFinishSplit(pawns, 0, 7)).toBe(false);
-    expect(getSplitSteps(pawns, 0, 'heart_7', 7)).toEqual([]);
-    // avec 3 pas restants : 2 (pion 0) + 1 (pion 1) marche,
-    // mais aucun pion ne peut faire les 3 pas d'un coup.
-    const steps = getSplitSteps(pawns, 0, 'heart_7', 3);
-    expect(steps.some((step) => step.type === 'split' && step.steps === 3)).toBe(false);
-    expect(steps.length).toBeGreaterThan(0);
+    const steps = getSplitSteps(pawns, 0, 'heart_7', 7);
+    expect(steps).toContainEqual({ type: 'split', cardId: 'heart_7', pawnId: 0, steps: 2, enter: false });
+    expect(steps).toContainEqual({ type: 'split', cardId: 'heart_7', pawnId: 1, steps: 1, enter: false });
+  });
+
+  it('rentrer a la maison avec le 7 : les pas restants sont perdus', () => {
+    // siege 0 : porte en 69. Maison pleine sauf la case 0, les autres pions deja rentres.
+    let game = makeGame([
+      onBoard(0, 0, 66),
+      { id: 1, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 1 } },
+      { id: 2, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 2 } },
+      { id: 3, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 3 } },
+    ]);
+
+    // 4 pas pour rentrer en case 0 : il en reste 3 que personne ne peut jouer
+    const out = playTurn(game, 0, { type: 'split', cardId: 'heart_7', pawnId: 0, steps: 4, enter: true });
+    expect(out).not.toBeNull();
+    game = out!.game;
+    expect(positionOf(game, 0)).toEqual({ zone: 'home', cell: 0 });
+    expect(game.phase).toBe('finished');
+    expect(game.winner).toBe(0);
+  });
+
+  it('plus rien de jouable au milieu du 7 : le tour passe', () => {
+    // pion 0 a la maison case 0, case 3 occupee : 2 pas maximum, les autres au spawn
+    let game = makeGame([
+      { id: 0, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 0 } },
+      { id: 3, playerSeat: 0 as Seat, position: { zone: 'home' as const, cell: 3 } },
+      inSpawn(1, 0),
+      inSpawn(2, 0),
+    ]);
+
+    game = playTurn(game, 0, { type: 'split', cardId: 'heart_7', pawnId: 0, steps: 2, enter: false })!.game;
+    expect(positionOf(game, 0)).toEqual({ zone: 'home', cell: 2 });
+    expect(game.pendingSplit).toBeNull();
+    expect(game.currentSeat).toBe(1);
   });
 
   it('7 injouable : on peut le defausser', () => {

@@ -76,13 +76,14 @@ export default function Rules() {
                 Move forward 12.
               </CardRule>
               <CardRule name="Jack" imagePath="/card_clubs_11.png">
-                Swap any two pawns on the board <strong>or</strong> move forward 11. Pawns in a
-                starting zone or at home cannot be swapped.
+                Swap one of your pawns with any other pawn on the board. It never moves forward:
+                if no swap is possible, it is discarded. Pawns in a starting zone or at home cannot
+                be swapped.
               </CardRule>
               <CardRule name="7" imagePath="/card_heart_7.png">
-                Use all 7 steps, on one pawn or split between up to four of your pawns. It can
-                bring a pawn home. Every opponent pawn you pass over goes back to its starting zone;
-                your own pawns are left alone.
+                Split 7 steps between one or more of your pawns. It can bring a pawn home. Keep
+                playing steps as long as you can: the ones nobody can play are lost. Every pawn
+                you pass over goes back to its starting zone, your own ones too.
               </CardRule>
               <CardRule name="4" imagePath="/card_spade_4.png">
                 Move <strong>backward</strong> 4.

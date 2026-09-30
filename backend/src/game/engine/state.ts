@@ -3,6 +3,7 @@ import { ActionResult, applyAction } from "./apply";
 import { pawnsOf } from "./board";
 import { createDeck, dealCards, isRoundOver, playCard, shuffleDeck } from "./deck";
 import { isLegal } from "./legalMoves";
+import { getSplitSteps } from "./split";
 import { mod } from "./utils";
 
 //createGame, startRound, nextTurn, checkWinner
@@ -134,12 +135,14 @@ export function playTurn(game : Game, seat: Seat, action : GameAction): { game: 
 	winner = checkWinner(game);
 	if (winner !== null)
 		return {game : {...game, phase: 'finished', winner}, event};
-	//le 7 : tant qu'il reste des pas, le meme joueur rejoue
+	//le 7 : tant qu'il reste des pas jouables, le meme joueur rejoue.
+	//Si plus rien n'est jouable, les pas restants sont perdus.
 	if (action.type === 'split')
 	{
 		const left = (game.pendingSplit?.left ?? 7) - action.steps;
+		const canGoOn = left > 0 && getSplitSteps(game.pawns, seat, action.cardId, left).length > 0;
 
-		if (left > 0)
+		if (canGoOn)
 			return {game: {...game, pendingSplit: {cardId: action.cardId, left}}, event};
 		game = {...game, pendingSplit: null};
 	}

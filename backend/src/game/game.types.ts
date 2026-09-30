@@ -98,11 +98,20 @@ export type GameEvent = {
 // Ce qu'un joueur a le droit de voir : pas la main des autres, pas la pioche.
 export type PlayerView = Omit<Player, 'hand'> & { handCount: number };
 
+// Un coup que je peux jouer, et la case ou il pose mon pion.
+// to = null pour un echange ou une defausse : aucune case a montrer.
+export type LegalMove = {
+  action: GameAction;
+  to: PawnPosition | null;
+};
+
 export type GameView = Omit<Game, 'players' | 'drawPile'> & {
   mySeat: Seat;
   myHand: Card[];
   players: PlayerView[];
   drawPileCount: number;
+  // vide quand ce n'est pas mon tour
+  legalMoves: LegalMove[];
 };
 
 // Le message 'state' envoye a chaque commit.

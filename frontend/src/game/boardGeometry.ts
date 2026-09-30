@@ -295,12 +295,17 @@ export function getSpawnCellIndex(seat: number, slot: number): number {
   return seat * SPAWN_CELLS + slot;
 }
 
-/** Every cell a pawn walks over, the destination last. Wraps around the track. */
+/**
+ * Every cell a pawn walks over, the destination last. Wraps around the track.
+ * Negative `steps` walk backward, for the 4.
+ */
 export function getTravelPath(fromCellIndex: number, steps: number): number[] {
   const path: number[] = [];
+  const direction = steps < 0 ? -1 : 1;
 
-  for (let step = 1; step <= steps; step++) {
-    path.push((fromCellIndex + step) % TOTAL_CELLS);
+  for (let step = 1; step <= Math.abs(steps); step++) {
+    const cell = fromCellIndex + step * direction;
+    path.push(((cell % TOTAL_CELLS) + TOTAL_CELLS) % TOTAL_CELLS);
   }
 
   return path;
