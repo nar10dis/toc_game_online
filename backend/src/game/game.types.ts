@@ -68,22 +68,20 @@ export type Game = {
   discardPile: Card[];
   currentSeat: Seat;
   winner: Seat | null;
+  // null = pas de 7 en cours, sinon il reste `left` pas a jouer avec cette carte
+  pendingSplit: { cardId: CardId; left: number } | null;
 };
 
 /* ************************************************************************** */
 /*                                 6. ACTIONS                                 */
 /* ************************************************************************** */
-export type SplitStep = {
-  pawnId: number;
-  steps: number;
-};
-
 export type GameAction =
   | { type: 'move'; cardId: CardId; pawnId: number }
   | { type: 'enter'; cardId: CardId; pawnId: number }
   | { type: 'exit'; cardId: CardId; pawnId: number }
   | { type: 'swap'; cardId: CardId; pawnIdA: number; pawnIdB: number }
-  | { type: 'split'; cardId: CardId; steps: SplitStep[] }
+  // un seul morceau du 7 : un emit par morceau
+  | { type: 'split'; cardId: CardId; pawnId: number; steps: number; enter: boolean }
   | { type: 'discard'; cardId: CardId };
 
 /* ************************************************************************** */

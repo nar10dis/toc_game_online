@@ -27,12 +27,37 @@ export function TurnControls({ game, turnChoice }: TurnControlsProps) {
   if (turnChoice.playMode === "swap" && turnChoice.firstSwapPawnId !== null) {
     hint = "Choisis le pion avec qui échanger.";
   }
+  if (turnChoice.isSplitInProgress) {
+    hint = `Continue ton 7 : il reste ${turnChoice.splitLeft} pas.`;
+  }
+
+  // the 7 can be split: one button per number of steps still to play
+  const splitStepChoices: number[] = [];
+  for (let steps = 1; steps <= turnChoice.splitLeft; steps++) {
+    splitStepChoices.push(steps);
+  }
 
   return (
     <div className="flex flex-col items-start gap-2">
       <h2 className="text-xl font-bold">{hint}</h2>
 
-      {turnChoice.selectedCardId && (
+      {turnChoice.isSplitting && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span>Pas :</span>
+          {splitStepChoices.map((steps) => (
+            <Button
+              key={steps}
+              size="sm"
+              variant={turnChoice.splitSteps === steps ? "default" : "outline"}
+              onClick={() => turnChoice.changeSplitSteps(steps)}
+            >
+              {steps}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {(turnChoice.selectedCardId || turnChoice.isSplitInProgress) && (
         <div className="flex flex-wrap gap-2">
           <Button
             variant={turnChoice.playMode === "move" ? "default" : "outline"}
@@ -55,9 +80,11 @@ export function TurnControls({ game, turnChoice }: TurnControlsProps) {
               Échanger
             </Button>
           )}
-          <Button variant="destructive" onClick={turnChoice.handleDiscard}>
-            Défausser
-          </Button>
+          {!turnChoice.isSplitInProgress && (
+            <Button variant="destructive" onClick={turnChoice.handleDiscard}>
+              Défausser
+            </Button>
+          )}
         </div>
       )}
 

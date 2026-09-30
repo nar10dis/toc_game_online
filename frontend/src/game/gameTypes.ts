@@ -48,19 +48,20 @@ export type GameView = {
   discardPile: Card[];
   currentSeat: Seat;
   winner: Seat | null;
+  // null = no 7 in progress, otherwise `left` steps remain to play with this card
+  pendingSplit: { cardId: CardId; left: number } | null;
   mySeat: Seat;
   myHand: Card[];
   drawPileCount: number;
 };
-
-export type SplitStep = { pawnId: number; steps: number };
 
 export type GameAction =
   | { type: "move"; cardId: CardId; pawnId: number }
   | { type: "enter"; cardId: CardId; pawnId: number }
   | { type: "exit"; cardId: CardId; pawnId: number }
   | { type: "swap"; cardId: CardId; pawnIdA: number; pawnIdB: number }
-  | { type: "split"; cardId: CardId; steps: SplitStep[] }
+  // one piece of the 7: one emit per piece
+  | { type: "split"; cardId: CardId; pawnId: number; steps: number; enter: boolean }
   | { type: "discard"; cardId: CardId };
 
 /** What just happened, so we know what to animate. */

@@ -1,0 +1,35 @@
+frontend todo
+
+	CREATE GAME
+Quand on clique sur create game ca lance direct la page, pas besoin de recliquer sur create game apres/
+Faire en sorte quon voit les photos de profil des joueurs et celles qui sont vides.
+
+	PLATEAU
+	
+Regler le pb avec le header qui ya pas sur les autres pages.
+
+Player View -> faire en sorte que le seat 0 == en bas !! je nai pas besoin de voir ma popre photo de profil.
+Faire en sorte que chaque joueur voit un plateau ou il est en bas.
+
+Faire en sorte que les numeros de case soit une option a active ou desactive (label)
+faire en sorte que les messages saffichent ou non (label)
+
+	DETAILS GAME.
+VALLET : Si on veut echanger son pion -> il faut pas lavancer -> le vallet sert QUE a echanger ? sinon defausse ?
+
+Pour rentrer a la maison / continuer je veux pas avoir a choisir entre deux boutons mais je veux deux MovePreview et je tranche en cliquant
+
+Animation du 4 chelou
+Animation de rentrer a la maison chelou.
+Le MovePreview du 7 doit etre modifiable selon le hover.
+
+	FAIRE UN ECRAN DE WIN avec petite animation -> confettis qui partent des coins de lecran ? 
+	boutons continuer -> home page.
+	
+BACK
+mettre un temps random pour humanise les IA
+envoyer des logs au front a afficher -> chaque action a son log. -> comment les mettre en page ??
+
+
+
+

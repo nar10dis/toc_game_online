@@ -26,7 +26,7 @@ export default function Play() {
     // the dotted preview only makes sense for a plain move
     let previewDistance = 0;
     if (turnChoice.playMode === "move") {
-      previewDistance = turnChoice.selectedCardValue;
+      previewDistance = turnChoice.isSplitting ? turnChoice.splitSteps : turnChoice.selectedCardValue;
     }
 
     content = (
@@ -49,7 +49,7 @@ export default function Play() {
               hand={game.myHand}
               discardPile={game.discardPile}
               selectedCardId={turnChoice.selectedCardId}
-              canPickCard={isMyTurn}
+              canPickCard={isMyTurn && !turnChoice.isSplitInProgress}
               onCardClick={turnChoice.handleCardClick}
             />
           </div>

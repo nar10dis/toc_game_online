@@ -56,6 +56,11 @@ function getLastTravelPath(pawn: Pawn, lastEvent: GameEvent | null): number[] {
     const startCell = mod(pawn.position.cell - steps, TOTAL_CELLS);
     return getTravelPath(startCell, steps);
   }
+  // a piece of the 7: same walk, with its own number of steps
+  if (action.type === "split" && !action.enter && action.pawnId === pawn.id) {
+    const startCell = mod(pawn.position.cell - action.steps, TOTAL_CELLS);
+    return getTravelPath(startCell, action.steps);
+  }
   return [];
 }
 
