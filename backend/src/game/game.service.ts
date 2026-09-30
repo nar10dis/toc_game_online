@@ -6,7 +6,11 @@ import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './en
 import { chooseAIAction } from './engine/AI';
 
 // Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
-const BOT_DELAY_MS = 1000;
+// Un bot "reflechit" entre 2 et 6 secondes avant de jouer une carte.
+const BOT_MIN_DELAY_MS = 2000;
+const BOT_MAX_DELAY_MS = 6000;
+// La suite d'un 7 deja commence : on n'attend pas autant a chaque morceau.
+const BOT_SPLIT_DELAY_MS = 1000;
 
 @Injectable()
 export class GameService {
@@ -167,7 +171,10 @@ export class GameService {
         let game = this.games.get(gameId);
 
         while (game && game.phase === 'playing' && GameTypes.isAI(game.players[game.currentSeat])) {
-            await new Promise(resolve => setTimeout(resolve, BOT_DELAY_MS));
+            let delay = BOT_MIN_DELAY_MS + Math.random() * (BOT_MAX_DELAY_MS - BOT_MIN_DELAY_MS);
+            if (game.pendingSplit !== null)
+                delay = BOT_SPLIT_DELAY_MS;
+            await new Promise(resolve => setTimeout(resolve, delay));
             const seat = game.currentSeat;
             const action = chooseAIAction(game, seat);
             const out = action && playTurn(game, seat, action);
