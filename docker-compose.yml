@@ -12,7 +12,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    networks: 
+    networks:
       - docker-network
 
   frontend:
@@ -25,11 +25,11 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    networks: 
+    networks:
       - docker-network
 
-  nginx: 
-    depends_on: 
+  nginx:
+    depends_on:
       - frontend
       - backend
     build: ./nginx
@@ -64,24 +64,22 @@ services:
       - "9200:9200"
     networks:
       - docker-network
-  
+
   kibana:
     image: docker.elastic.co/kibana/kibana:9.5.4
     container_name: kibana
-    environnement:
+    environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "5601:5601"
     depends_on:
-      - elastisearch
+      - elasticsearch
     networks:
       - docker-network
-  
+
   logstash:
-    image: docker.elastic.co/logstash/logstash:9.5.4
+    build: ./logstash
     container_name: logstash
-    volumes: 
-    - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
     depends_on:
     - elasticsearch
     networks:
@@ -100,7 +98,7 @@ services:
     networks:
     - docker-network
 
-      
+
 
 networks:
   docker-network:
