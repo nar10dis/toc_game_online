@@ -3,5 +3,16 @@ filebeat.autodiscover:
     - type: docker
       hints.enabled: true
 
+      templates:
+        -condition:
+          contains:
+            docker.container.name: nginx
+          config:
+            - type: 
+
+
+
+
+
 output.logstash:
   hosts: ["logstash:5044"]
