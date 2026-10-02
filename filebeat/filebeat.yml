@@ -4,12 +4,22 @@ filebeat.autodiscover:
       hints.enabled: true
 
       templates:
-        -condition:
+        - condition:
           contains:
             docker.container.name: nginx
           config:
-            - type: 
+            - type: filestream
+              id: ${data.docker.container.id}
+              path: etc/nginx/
 
+      templates:
+        - condition:
+          contains:
+            docker.container.name: backend
+          config:
+            - type: filestream
+              id: ${data.docker.container.id}
+              path: 
 
 
 
