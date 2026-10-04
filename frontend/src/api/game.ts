@@ -1,31 +1,9 @@
+import { fetchWithRefresh, readError } from "@/api/auth";
+
 export type GameCreated = { gameId: number; inviteCode: string };
 
-// POST that retries once after refreshing the jwt (it only lives 15 minutes)
-async function postWithRefresh(url: string): Promise<Response> {
-  let response = await fetch(url, { method: "POST" });
-
-  if (response.status === 401) {
-    const refreshResponse = await fetch("/api/auth/refresh", { method: "POST" });
-    if (!refreshResponse.ok) {
-      return response;
-    }
-    response = await fetch(url, { method: "POST" });
-  }
-  return response;
-}
-
-// The backend sends { message } when it refuses, we show it as is
-async function readError(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    return String(body.message);
-  } catch {
-    return "Something went wrong.";
-  }
-}
-
 export async function createGame(): Promise<GameCreated> {
-  const response = await postWithRefresh("/api/game");
+  const response = await fetchWithRefresh("/api/game", { method: "POST" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }
@@ -33,7 +11,7 @@ export async function createGame(): Promise<GameCreated> {
 }
 
 export async function joinGame(inviteCode: string): Promise<GameCreated> {
-  const response = await postWithRefresh(`/api/game/join/${encodeURIComponent(inviteCode)}`);
+  const response = await fetchWithRefresh(`/api/game/join/${encodeURIComponent(inviteCode)}`, { method: "POST" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }
@@ -41,7 +19,7 @@ export async function joinGame(inviteCode: string): Promise<GameCreated> {
 }
 
 export async function startGame(gameId: number): Promise<void> {
-  const response = await postWithRefresh(`/api/game/start/${gameId}`);
+  const response = await fetchWithRefresh(`/api/game/start/${gameId}`, { method: "POST" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }

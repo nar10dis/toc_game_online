@@ -1,5 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 
+import { refreshAuth } from "@/api/auth";
+
 let socket: Socket | null = null;
 
 /**
@@ -22,8 +24,8 @@ export function getSocket(): Socket {
     if (reason !== "io server disconnect") {
       return;
     }
-    const refreshResponse = await fetch("/api/auth/refresh", { method: "POST" });
-    if (refreshResponse.ok) {
+    const isRefreshed = await refreshAuth();
+    if (isRefreshed) {
       socket?.connect();
     }
   });
