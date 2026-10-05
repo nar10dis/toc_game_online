@@ -78,4 +78,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection {
             return { error: (error as Error).message };
         }
     }
+
+    @SubscribeMessage('fast-bots')
+    handleFastBots(@ConnectedSocket() client: Socket, @MessageBody() body: { gameId: number; fastBots: boolean }) {
+        try {
+            this.gameService.setFastBots(body.gameId, client.data.userId, body.fastBots === true);
+            return { ok: true };
+        }
+        catch (error) {
+            return { error: (error as Error).message };
+        }
+    }
 }

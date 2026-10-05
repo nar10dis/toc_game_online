@@ -39,7 +39,7 @@ function Confetto({ corner, index }: { corner: (typeof CORNERS)[number]; index: 
   const flyY = -(20 + pseudoRandom(seed * 2) * 50);
   const fallY = 40 + pseudoRandom(seed * 3) * 40;
   const spin = (pseudoRandom(seed * 4) - 0.5) * 1440;
-  const delay = pseudoRandom(seed * 5) * 0.4;
+  const delay = pseudoRandom(seed * 5) * 1.5;
   const isTop = corner.top === "0%";
 
   return (
@@ -54,7 +54,7 @@ function Confetto({ corner, index }: { corner: (typeof CORNERS)[number]; index: 
         rotate: spin,
         opacity: [1, 1, 0],
       }}
-      transition={{ duration: 2.6, delay, ease: "easeOut", times: [0, 0.35, 1] }}
+      transition={{ duration: 5, delay, ease: "easeOut", times: [0, 0.35, 1] }}
     />
   );
 }
@@ -97,6 +97,7 @@ export function WinScreen({ winnerSeat, winnerName, isMe }: WinScreenProps) {
         >
           {isMe ? "Victoire !" : `${winnerName} a gagné !`}
         </p>
+        {isMe && <p className="font-heading text-2xl md:text-3xl">Bravo, {winnerName} !</p>}
         <Button
           onClick={() => router.push("/menu")}
           className="mt-4 h-auto rounded-2xl px-8 py-3 text-lg"

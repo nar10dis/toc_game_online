@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { CardRule } from "@/components/rules/CardRule";
+import { CARD_RULES } from "@/components/rules/cardRules";
 import { RulesSidebar, type RuleSection } from "@/components/rules/RulesSidebar";
 import { WornFrame } from "@/components/layout/WornFrame";
 
@@ -66,31 +67,11 @@ export default function Rules() {
             </p>
 
             <div className="mt-6 grid gap-x-10 gap-y-6 md:grid-cols-2">
-              <CardRule name="Ace" imagePath="/card_heart_1.png">
-                Move forward 1 <strong>or</strong> bring a pawn out of the starting zone.
-              </CardRule>
-              <CardRule name="King" imagePath="/card_spade_13.png">
-                Move forward 13 <strong>or</strong> bring a pawn out of the starting zone.
-              </CardRule>
-              <CardRule name="Queen" imagePath="/card_diamond_12.png">
-                Move forward 12.
-              </CardRule>
-              <CardRule name="Jack" imagePath="/card_clubs_11.png">
-                Swap one of your pawns with any other pawn on the board. It never moves forward:
-                if no swap is possible, it is discarded. Pawns in a starting zone or at home cannot
-                be swapped.
-              </CardRule>
-              <CardRule name="7" imagePath="/card_heart_7.png">
-                Split 7 steps between one or more of your pawns. It can bring a pawn home. Keep
-                playing steps as long as you can: the ones nobody can play are lost. Every pawn
-                you pass over goes back to its starting zone, your own ones too.
-              </CardRule>
-              <CardRule name="4" imagePath="/card_spade_4.png">
-                Move <strong>backward</strong> 4.
-              </CardRule>
-              <CardRule name="2, 3, 5, 6, 8, 9, 10" imagePath="/card_diamond_5.png">
-                Move forward as many cells as the number on the card.
-              </CardRule>
+              {CARD_RULES.map((rule) => (
+                <CardRule key={rule.name} name={rule.name} imagePath={rule.imagePath}>
+                  {rule.text}
+                </CardRule>
+              ))}
             </div>
           </WornFrame>
 

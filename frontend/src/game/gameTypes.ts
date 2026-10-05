@@ -57,6 +57,8 @@ export type GameView = {
   winner: Seat | null;
   // null = no 7 in progress, otherwise `left` steps remain to play with this card
   pendingSplit: { cardId: CardId; left: number } | null;
+  /** The bots play in 1 second. */
+  fastBots: boolean;
   mySeat: Seat;
   myHand: Card[];
   drawPileCount: number;

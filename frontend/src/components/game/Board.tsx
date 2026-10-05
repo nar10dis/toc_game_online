@@ -80,23 +80,13 @@ function calculateDrawTimings(boardSize: number) {
 /** Size of the index written inside a cell, in board units. */
 const INDEX_FONT_SIZE = 22;
 
-/** The number written inside a cell, once the pen has finished drawing it. */
-function CellIndex({
-  x,
-  y,
-  label,
-  delay,
-}: {
-  x: number;
-  y: number;
-  label: string;
-  delay: number;
-}) {
+/** The number written inside a cell. No animation: it shows up as soon as it is turned on. */
+function CellIndex({ x, y, label }: { x: number; y: number; label: string }) {
   const rotation = useBoardRotation();
 
   return (
     <g transform={`rotate(${-rotation} ${x} ${y})`}>
-      <motion.text
+      <text
         x={x}
         y={y}
         className="font-body"
@@ -104,12 +94,10 @@ function CellIndex({
         fontSize={INDEX_FONT_SIZE}
         textAnchor="middle"
         dominantBaseline="central"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.7 }}
-        transition={{ delay, duration: 0.2 }}
+        opacity={0.7}
       >
         {label}
-      </motion.text>
+      </text>
     </g>
   );
 }
@@ -185,12 +173,7 @@ export function Board({
                 />
 
                 {showIndexes && (
-                  <CellIndex
-                    x={x}
-                    y={y}
-                    label={String(i)}
-                    delay={timing.delay + timing.duration}
-                  />
+                  <CellIndex x={x} y={y} label={String(i)} />
                 )}
             </g>
           );
@@ -222,7 +205,7 @@ export function Board({
 
               {/* prefixed, because homes have their own numbering */}
               {showIndexes && (
-                <CellIndex x={x} y={y} label={`H${i}`} delay={i * 0.08 + 0.25} />
+                <CellIndex x={x} y={y} label={`H${i}`} />
               )}
             </g>
           );
@@ -254,7 +237,7 @@ export function Board({
 
               {/* prefixed, because spawns have their own numbering */}
               {showIndexes && (
-                <CellIndex x={x} y={y} label={`S${i}`} delay={i * 0.08 + 0.25} />
+                <CellIndex x={x} y={y} label={`S${i}`} />
               )}
             </g>
           );

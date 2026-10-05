@@ -19,6 +19,8 @@ export type GameState = {
   /** True when the server says we are in no game at all. */
   hasNoGame: boolean;
   sendAction: (action: GameAction) => Promise<ActionAnswer>;
+  /** Fast bots for everyone in the game: they play in 1 second. */
+  sendFastBots: (fastBots: boolean) => void;
 };
 
 /**
@@ -81,5 +83,12 @@ export function useGame(): GameState {
     });
   }
 
-  return { game, lastEvent, events, hasNoGame, sendAction };
+  // the new value comes back through 'state', like a move
+  function sendFastBots(fastBots: boolean) {
+    if (game) {
+      getSocket().emit("fast-bots", { gameId: game.id, fastBots });
+    }
+  }
+
+  return { game, lastEvent, events, hasNoGame, sendAction, sendFastBots };
 }

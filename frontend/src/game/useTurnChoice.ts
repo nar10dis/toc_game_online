@@ -61,6 +61,8 @@ export function useTurnChoice(
     selectedCardValue = getCardValueFromId(cardId);
   }
   const isJack = selectedCardValue === 11;
+  // the 5 only moves the other players' pawns
+  const isFive = selectedCardValue === 5;
 
   const legalMoves = game?.legalMoves ?? [];
   const cardMoves = legalMoves.filter((move) => move.action.cardId === cardId);
@@ -139,7 +141,7 @@ export function useTurnChoice(
     }
     for (const pawnId of pawnIds) {
       const pawn = game?.pawns.find((onePawn) => onePawn.id === pawnId);
-      if (pawn && pawn.playerSeat === game?.mySeat) selectablePawnIds.push(pawnId);
+      if (pawn && (isFive || pawn.playerSeat === game?.mySeat)) selectablePawnIds.push(pawnId);
     }
   }
   // the picked pawn stays clickable, to let it go

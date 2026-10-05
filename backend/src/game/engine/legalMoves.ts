@@ -42,6 +42,21 @@ export function getLegalActions(hand : Card[], pawns: Pawn[], seat: Seat, pendin
 				legalMoves.push({type: 'discard', cardId: card.id});
 			continue;
 		}
+		//le 5 fait avancer seulement un pion adverse, sur le plateau. On le defausse s'il est injouable.
+		if (card.value === 5)
+		{
+			const fiveMoves : GameAction[] = [];
+
+			for (const pawn of pawns)
+			{
+				if (pawn.playerSeat !== seat && Rules.canMove(pawns, 5, pawn))
+					fiveMoves.push({type: 'move', cardId: card.id, pawnId: pawn.id});
+			}
+			legalMoves.push(...fiveMoves);
+			if (fiveMoves.length === 0)
+				legalMoves.push({type: 'discard', cardId: card.id});
+			continue;
+		}
 		//le valet sert seulement a echanger : il n'avance jamais
 		const isJack = card.value === 11;
 

@@ -6,11 +6,13 @@ import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './en
 import { chooseAIAction } from './engine/AI';
 
 // Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
-// Un bot "reflechit" entre 2 et 6 secondes avant de jouer une carte.
+// Un bot "reflechit" entre 2 et 3 secondes avant de jouer une carte.
 const BOT_MIN_DELAY_MS = 2000;
-const BOT_MAX_DELAY_MS = 6000;
+const BOT_MAX_DELAY_MS = 3000;
 // La suite d'un 7 deja commence : on n'attend pas autant a chaque morceau.
 const BOT_SPLIT_DELAY_MS = 1000;
+// IA rapide (option des parametres) : 1 seconde par coup.
+const BOT_FAST_DELAY_MS = 1000;
 
 @Injectable()
 export class GameService {
@@ -166,6 +168,17 @@ export class GameService {
         void this.runBots(gameId);
     }
 
+    // N'importe quel joueur de la partie peut activer l'IA rapide, pour tout le monde.
+    setFastBots(gameId: number, userId: number, fastBots: boolean) {
+        const game = this.games.get(gameId);
+        if (!game)
+            throw new NotFoundException('Game not found');
+        if (!game.players.some(p => p.userId === userId))
+            throw new ForbiddenException('You are not in this game');
+
+        this.commit({ ...game, fastBots });
+    }
+
     // Fait jouer les bots tant que c'est a eux, un commit par coup.
     private async runBots(gameId: number) {
         let game = this.games.get(gameId);
@@ -174,7 +187,13 @@ export class GameService {
             let delay = BOT_MIN_DELAY_MS + Math.random() * (BOT_MAX_DELAY_MS - BOT_MIN_DELAY_MS);
             if (game.pendingSplit !== null)
                 delay = BOT_SPLIT_DELAY_MS;
+            if (game.fastBots)
+                delay = BOT_FAST_DELAY_MS;
             await new Promise(resolve => setTimeout(resolve, delay));
+            // la partie a pu changer pendant la pause (IA rapide cochee) : on la relit
+            game = this.games.get(gameId);
+            if (!game || game.phase !== 'playing')
+                break;
             const seat = game.currentSeat;
             const action = chooseAIAction(game, seat);
             const out = action && playTurn(game, seat, action);
