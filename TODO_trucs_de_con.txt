@@ -1,3 +1,0 @@
-LINT && FORMAT !!
-
-privacy policry et terms of usage !
