@@ -7,18 +7,7 @@ import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { GameAction, StateMessage, isAI } from './game.types';
 import { viewFor } from './engine/view';
-
-// Le cookie arrive brut dans le handshake : "jwt=xxx; refresh_token=yyy"
-function readCookie(cookieHeader: string | undefined, name: string): string | null {
-    if (!cookieHeader)
-        return null;
-    for (const part of cookieHeader.split(';')) {
-        const [key, ...value] = part.trim().split('=');
-        if (key === name)
-            return decodeURIComponent(value.join('='));
-    }
-    return null;
-}
+import { readCookie } from '../auth/ws-auth';
 
 // path sous /ws/ : c'est la route que nginx proxifie avec l'upgrade websocket.
 @WebSocketGateway({ path: '/ws/socket.io' })

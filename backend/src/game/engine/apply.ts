@@ -107,7 +107,6 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 			const startOfHome = startCell(seat);
 			const target = pawn.position.cell + cardValue;
 
-			if (mod(pawn.position.cell + cardValue, BOARD_CELLS_COUNT) )
 		}
 
 	}

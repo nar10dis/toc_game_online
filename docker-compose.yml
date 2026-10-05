@@ -1,7 +1,9 @@
 services:
   backend:
+    # A started container is not a ready database: migrate deploy would fail on a fresh volume
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     build: ./backend
     container_name: backend
     env_file:
@@ -45,6 +47,12 @@ services:
     image: postgres:18.4-alpine3.24
     env_file:
       - .env
+    healthcheck:
+      # $$ so the variables are read inside the container, not by compose
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
     networks:
       - docker-network
     volumes:

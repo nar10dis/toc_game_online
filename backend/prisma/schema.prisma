@@ -24,6 +24,8 @@ model User {
   hashedRefreshToken  String?
   profile             Profile?
   gamePlayers         GamePlayer[]
+  sentFriendRequests      Friendship[] @relation("FriendRequestsSent")
+  receivedFriendRequests  Friendship[] @relation("FriendRequestsReceived")
 }
 
 model Profile {
@@ -57,4 +59,22 @@ model GamePlayer {
   user                User      @relation(fields: [userId], references: [id])
   seat                Int
   joindedAt           DateTime  @default(now())
+}
+
+model Friendship {
+  id                  Int               @id @default(autoincrement())
+  requesterId         Int
+  requester           User              @relation("FriendRequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId         Int
+  addressee           User              @relation("FriendRequestsReceived", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status              FriendshipStatus  @default(pending)
+  createdAt           DateTime          @default(now())
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
+}
+
+enum FriendshipStatus {
+  pending
+  accepted
 }
