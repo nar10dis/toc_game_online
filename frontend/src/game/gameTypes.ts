@@ -34,6 +34,7 @@ export type PlayerView = {
   userId: number | null;
   pseudo: string;
   seat: Seat;
+  // false: the player left, the AI plays for them until they come back
   isConnected: boolean;
   handCount: number;
 };

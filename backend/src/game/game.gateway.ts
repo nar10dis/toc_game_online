@@ -1,7 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import {
     WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayInit,
-    OnGatewayConnection, ConnectedSocket, MessageBody,
+    OnGatewayConnection, OnGatewayDisconnect, ConnectedSocket, MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
@@ -11,7 +11,7 @@ import { readCookie } from '../auth/ws-auth';
 
 // path sous /ws/ : c'est la route que nginx proxifie avec l'upgrade websocket.
 @WebSocketGateway({ path: '/ws/socket.io' })
-export class GameGateway implements OnGatewayInit, OnGatewayConnection {
+export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Server;
 
     constructor(private gameService: GameService, private jwtService: JwtService) {}
@@ -39,7 +39,20 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection {
         }
         catch {
             client.disconnect();
+            return;
         }
+        this.gameService.userConnected(client.data.userId);
+    }
+
+    // Le user n'est parti que si c'etait son dernier onglet.
+    handleDisconnect(client: Socket) {
+        const userId: number | undefined = client.data.userId;
+        if (userId === undefined)
+            return; // kicke au handshake, il n'a jamais ete connecte
+        const room = this.server.sockets.adapter.rooms.get(`user-${userId}`);
+        const otherSockets = [...(room ?? [])].filter(id => id !== client.id);
+        if (otherSockets.length === 0)
+            this.gameService.userDisconnected(userId);
     }
 
     // Le client demande l'etat actuel (arrivee sur une page, reconnexion).

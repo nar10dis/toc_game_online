@@ -21,7 +21,12 @@ export default function Play() {
 
   if (game) {
     const isMyTurn = game.phase === "playing" && game.currentSeat === game.mySeat;
-    const playerNames = game.players.map((player) => player.pseudo);
+    const playerNames = game.players.map((player) => {
+      if (!player.isConnected) {
+        return `${player.pseudo} (IA)`;
+      }
+      return player.pseudo;
+    });
 
     // the dotted preview only makes sense for a plain move
     let previewDistance = 0;
