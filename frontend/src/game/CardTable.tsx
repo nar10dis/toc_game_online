@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, type Transition } from "motion/react";
 
+import { cardRuleOf } from "@/components/rules/cardRules";
 import { getCardFrenchLabel, getCardImagePath } from "@/game/cardDeck";
 import {
   CARD_HEIGHT_IN_PIXELS,
@@ -12,6 +13,7 @@ import {
   HOVER_LIFT_IN_PIXELS,
   PLAYED_CARD_TRAVEL,
   getCardOffScreenY,
+  getCardScale,
   getHandCardTransform,
   getPlayedCardTilt,
   getPlayedCardTransform,
@@ -26,6 +28,13 @@ import type { Card, CardId } from "@/game/gameTypes";
  * the hand rather than under it.
  */
 const BOTTOM_OF_PILE_STACKING_ORDER = 100;
+
+/** How long the pointer must rest on a card of the hand before its hint opens. */
+const HINT_DELAY_MS = 800;
+/** Width of the hint bubble. It is not scaled with the cards, to stay readable. */
+const HINT_WIDTH_IN_PIXELS = 260;
+/** Gap between the top of the hovered card and the bottom of the hint. */
+const HINT_GAP_IN_PIXELS = 12;
 
 /* ************************************************************************** */
 /*                                 TABLE SIZE                                 */
@@ -71,6 +80,8 @@ type SingleCardProps = {
   isSelected: boolean;
   /** Picks the card, or `null` when it cannot be picked right now. */
   onClick: (() => void) | null;
+  /** Pointer enters / leaves the card, or `null` for a card with no hint. */
+  onHoverChange: ((isHovered: boolean) => void) | null;
 };
 
 /**
@@ -85,6 +96,7 @@ function SingleCard({
   offScreenY,
   isSelected,
   onClick,
+  onHoverChange,
 }: SingleCardProps) {
   const isClickable = onClick !== null;
 
@@ -98,6 +110,8 @@ function SingleCard({
     //animations never fight over the same transform.
     <motion.div
       onClick={onClick ?? undefined}
+      onHoverStart={() => onHoverChange?.(true)}
+      onHoverEnd={() => onHoverChange?.(false)}
       style={{
         position: "absolute",
         top: 0,
@@ -133,6 +147,57 @@ function SingleCard({
 }
 
 /* ************************************************************************** */
+/*                                 CARD  HINT                                 */
+/* ************************************************************************** */
+
+type CardHintProps = {
+  card: Card;
+  /** Transform of the hovered card, to sit right above it. */
+  cardTransform: CardTransform;
+  tableSize: TableSize;
+};
+
+/** What the hovered card of the hand can do, shown above it. */
+function CardHint({ card, cardTransform, tableSize }: CardHintProps) {
+  const rule = cardRuleOf(card.value);
+  if (!rule) return null;
+
+  //the card scales from its bottom centre: its middle stays at x + width / 2,
+  //and its top edge comes down by the height it lost. The hover lift is
+  //scaled with the card.
+  const cardCenterX = cardTransform.x + CARD_WIDTH_IN_PIXELS / 2;
+  const cardTopY =
+    cardTransform.y +
+    CARD_HEIGHT_IN_PIXELS * (1 - cardTransform.scale) -
+    HOVER_LIFT_IN_PIXELS * cardTransform.scale;
+
+  //kept inside the table, even above the cards at the ends of the hand.
+  const halfWidth = HINT_WIDTH_IN_PIXELS / 2;
+  const left = Math.min(Math.max(cardCenterX, halfWidth), tableSize.width - halfWidth);
+
+  return (
+    <motion.div
+      className="rounded-lg border bg-card p-3 text-card-foreground shadow-md"
+      style={{
+        position: "absolute",
+        left: left - halfWidth,
+        bottom: tableSize.height - cardTopY + HINT_GAP_IN_PIXELS,
+        width: HINT_WIDTH_IN_PIXELS,
+        pointerEvents: "none",
+        zIndex: BOTTOM_OF_PILE_STACKING_ORDER * 2,
+      }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 6 }}
+      transition={{ duration: 0.15 }}
+    >
+      <p className="font-heading text-base font-bold">{getCardFrenchLabel(card)}</p>
+      <div className="font-body text-sm text-muted-foreground">{rule.text}</div>
+    </motion.div>
+  );
+}
+
+/* ************************************************************************** */
 /*                                 THE TABLE                                  */
 /* ************************************************************************** */
 
@@ -144,6 +209,7 @@ type PositionedCard = {
   movementTransition: Transition;
   isSelected: boolean;
   onClick: (() => void) | null;
+  onHoverChange: ((isHovered: boolean) => void) | null;
 };
 
 type CardTableProps = {
@@ -167,6 +233,25 @@ export function CardTable({
 }: CardTableProps) {
   const tableRef = useRef<HTMLDivElement>(null);
   const tableSize = useTableSize(tableRef);
+  const [hintCardId, setHintCardId] = useState<CardId | null>(null);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    };
+  }, []);
+
+  //the hint opens once the pointer has rested on the same card long enough.
+  function handleHandCardHover(cardId: CardId, isHovered: boolean) {
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    hintTimerRef.current = null;
+    if (!isHovered) {
+      setHintCardId(null);
+      return;
+    }
+    hintTimerRef.current = setTimeout(() => setHintCardId(cardId), HINT_DELAY_MS);
+  }
 
   //the table is laid over the board and fills it; the cards are placed inside.
   const tableStyle = {
@@ -196,6 +281,7 @@ export function CardTable({
       movementTransition: HAND_CARD_MOVEMENT,
       isSelected: card.id === selectedCardId,
       onClick,
+      onHoverChange: (isHovered: boolean) => handleHandCardHover(card.id, isHovered),
     };
   });
 
@@ -207,8 +293,27 @@ export function CardTable({
       movementTransition: PLAYED_CARD_TRAVEL,
       isSelected: false,
       onClick: null,
+      onHoverChange: null,
     });
   });
+
+  //a played card leaves the hand: its hint goes with it.
+  const hintCardPosition = hand.findIndex((card) => card.id === hintCardId);
+  let hint = null;
+  if (hintCardPosition !== -1) {
+    const hintCardTransform = getHandCardTransform(hintCardPosition, hand.length, tableSize);
+    if (hand[hintCardPosition].id === selectedCardId) {
+      hintCardTransform.y -= HOVER_LIFT_IN_PIXELS * 2 * getCardScale(tableSize);
+    }
+    hint = (
+      <CardHint
+        key="card-hint"
+        card={hand[hintCardPosition]}
+        cardTransform={hintCardTransform}
+        tableSize={tableSize}
+      />
+    );
+  }
 
   //a played card must stay the very same element as it was in the hand, so it
   //flies from where it sits. Sorting by id keeps every card at the same rank
@@ -228,9 +333,11 @@ export function CardTable({
             offScreenY={offScreenY}
             isSelected={positionedCard.isSelected}
             onClick={positionedCard.onClick}
+            onHoverChange={positionedCard.onHoverChange}
           />
         ))}
       </AnimatePresence>
+      <AnimatePresence>{hint}</AnimatePresence>
     </div>
   );
 }
