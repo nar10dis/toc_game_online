@@ -39,6 +39,13 @@ export type PlayerView = {
   handCount: number;
 };
 
+/** A move I may play, and the cell it puts my pawn on. */
+export type LegalMove = {
+  action: GameAction;
+  /** null for a swap or a discard: there is no cell to show. */
+  to: PawnPosition | null;
+};
+
 /** The game as the server lets ME see it: only my hand, no draw pile. */
 export type GameView = {
   id: number;
@@ -49,19 +56,24 @@ export type GameView = {
   discardPile: Card[];
   currentSeat: Seat;
   winner: Seat | null;
+  // null = no 7 in progress, otherwise `left` steps remain to play with this card
+  pendingSplit: { cardId: CardId; left: number } | null;
+  /** The bots play in 1 second. */
+  fastBots: boolean;
   mySeat: Seat;
   myHand: Card[];
   drawPileCount: number;
+  /** Empty when it is not my turn. */
+  legalMoves: LegalMove[];
 };
-
-export type SplitStep = { pawnId: number; steps: number };
 
 export type GameAction =
   | { type: "move"; cardId: CardId; pawnId: number }
   | { type: "enter"; cardId: CardId; pawnId: number }
   | { type: "exit"; cardId: CardId; pawnId: number }
   | { type: "swap"; cardId: CardId; pawnIdA: number; pawnIdB: number }
-  | { type: "split"; cardId: CardId; steps: SplitStep[] }
+  // one piece of the 7: one emit per piece
+  | { type: "split"; cardId: CardId; pawnId: number; steps: number; enter: boolean }
   | { type: "discard"; cardId: CardId };
 
 /** What just happened, so we know what to animate. */

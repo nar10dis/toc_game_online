@@ -3,6 +3,7 @@ import { ActionResult, applyAction } from "./apply";
 import { pawnsOf } from "./board";
 import { createDeck, dealCards, isRoundOver, playCard, shuffleDeck } from "./deck";
 import { isLegal } from "./legalMoves";
+import { getSplitSteps } from "./split";
 import { mod } from "./utils";
 
 //createGame, startRound, nextTurn, checkWinner
@@ -22,6 +23,8 @@ export function initGame(id: number, inviteCode: string): Game
 				discardPile: [],
 				currentSeat: 0,
 				winner: null,
+				pendingSplit: null,
+				fastBots: false,
 		}
 	return newGame;
 }
@@ -60,9 +63,10 @@ function createPawns(players: Player[]) : Pawn[] {
 export function initStartingGame(game: Game): Game {
 
 	let nextSeat = game.players.length as Seat;
+	let IAPlayers : Player[] = [];
 
 	while (nextSeat < 4) {
-		game.players.push({
+		IAPlayers.push({
 			userId: null,
 			pseudo: `IA ${nextSeat + 1}`,
 			seat: nextSeat,
@@ -71,13 +75,18 @@ export function initStartingGame(game: Game): Game {
 		});
 		nextSeat++;
 	}
+	// les humains deja la + les IA : game.players n'est pas modifie
+	const allPlayers : Player[] = [...game.players, ...IAPlayers];
+
 	return {...game,
 		currentSeat: 0,
 		winner: null,
+		pendingSplit: null,
 		phase: 'playing',
+		players: allPlayers,
 		drawPile: shuffleDeck(createDeck()),
 		discardPile: [],
-		pawns: createPawns(game.players)
+		pawns: createPawns(allPlayers)
 	};
 }
 
@@ -105,25 +114,39 @@ export function playTurn(game : Game, seat: Seat, action : GameAction): { game: 
 	let winner : Seat | null;
 	let event : GameEvent;
 	//check si laction est leglae
-	if (!isLegal(currentPlayer.hand, game.pawns, seat, action))
+	if (!isLegal(currentPlayer.hand, game.pawns, seat, game.pendingSplit, action))
 		return null;
 	//lapplique
 	result = applyAction(game.pawns, seat, action);
-	//la joue
-	newCardState = playCard(currentPlayer.hand, game.discardPile, action.cardId);
-	if (!newCardState)
-		return null; //la carte nexiste pas dans la main du joueur
-	currentPlayer = {...currentPlayer, hand: newCardState.hand};
-	game = {...game,
-			players: game.players.map((p, i) => i === seat ? currentPlayer : p),
-			discardPile: newCardState.discardPile,
-			pawns: result.pawns};
+	//la joue. Pendant un 7, la carte est deja posee depuis le premier morceau.
+	if (game.pendingSplit === null)
+	{
+		newCardState = playCard(currentPlayer.hand, game.discardPile, action.cardId);
+		if (!newCardState)
+			return null; //la carte nexiste pas dans la main du joueur
+		currentPlayer = {...currentPlayer, hand: newCardState.hand};
+		game = {...game,
+				players: game.players.map((p, i) => i === seat ? currentPlayer : p),
+				discardPile: newCardState.discardPile};
+	}
+	game = {...game, pawns: result.pawns};
+
 	//ce qui vient de se passer, pour que le front puisse l'animer
 	event = { seat, action, captured: result.captured, newRound: false };
 	winner = checkWinner(game);
-	//!== null : le siege 0 est falsy
 	if (winner !== null)
 		return {game : {...game, phase: 'finished', winner}, event};
+	//le 7 : tant qu'il reste des pas jouables, le meme joueur rejoue.
+	//Si plus rien n'est jouable, les pas restants sont perdus.
+	if (action.type === 'split')
+	{
+		const left = (game.pendingSplit?.left ?? 7) - action.steps;
+		const canGoOn = left > 0 && getSplitSteps(game.pawns, seat, action.cardId, left).length > 0;
+
+		if (canGoOn)
+			return {game: {...game, pendingSplit: {cardId: action.cardId, left}}, event};
+		game = {...game, pendingSplit: null};
+	}
 	game = nextSeat(game);
 	if (isRoundOver(game.players))
 	{

@@ -1,7 +1,10 @@
 "use client";
 
 import { FlaskConicalIcon, HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
+import { useState } from "react";
 import { useRouter } from "next/router";
+
+import { createGame } from "@/api/game";
 
 import { DemonCampfire } from "@/components/demons/DemonCampfire";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -17,6 +20,21 @@ const bigButtonClasses =
 export default function Menu() {
   const router = useRouter();
   const username = useUsername();
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  async function handleCreate() {
+    setIsCreating(true);
+    setCreateError(null);
+    try {
+      await createGame();
+      // the lobby gets the game itself through the websocket
+      router.push("/lobby");
+    } catch (error) {
+      setCreateError((error as Error).message);
+      setIsCreating(false);
+    }
+  }
 
   let welcomeText = "Welcome !";
   if (username) {
@@ -43,10 +61,10 @@ export default function Menu() {
         </div>
 
         <div className="mt-12 grid gap-12 md:grid-cols-2">
-          <Button onClick={() => router.push("/create-game")} className={bigButtonClasses}>
+          <Button onClick={handleCreate} disabled={isCreating} className={bigButtonClasses}>
             <span className="flex items-center gap-2 font-heading text-3xl font-bold md:text-4xl">
               <PlusIcon className="size-8" />
-              Create game
+              {isCreating ? "Creating..." : "Create game"}
             </span>
             <span className="font-body text-base font-normal text-primary-foreground/80">
               Create your own game, with your own players and own rules !
@@ -67,6 +85,10 @@ export default function Menu() {
             </span>
           </Button>
         </div>
+
+        {createError && (
+          <p className="mt-6 text-center text-sm text-destructive">{createError}</p>
+        )}
 
         <Separator className="my-16" />
 

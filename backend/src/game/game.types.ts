@@ -71,22 +71,22 @@ export type Game = {
   discardPile: Card[];
   currentSeat: Seat;
   winner: Seat | null;
+  // null = pas de 7 en cours, sinon il reste `left` pas a jouer avec cette carte
+  pendingSplit: { cardId: CardId; left: number } | null;
+  // IA rapide : les bots jouent en 1 seconde
+  fastBots: boolean;
 };
 
 /* ************************************************************************** */
 /*                                 6. ACTIONS                                 */
 /* ************************************************************************** */
-export type SplitStep = {
-  pawnId: number;
-  steps: number;
-};
-
 export type GameAction =
   | { type: 'move'; cardId: CardId; pawnId: number }
   | { type: 'enter'; cardId: CardId; pawnId: number }
   | { type: 'exit'; cardId: CardId; pawnId: number }
   | { type: 'swap'; cardId: CardId; pawnIdA: number; pawnIdB: number }
-  | { type: 'split'; cardId: CardId; steps: SplitStep[] }
+  // un seul morceau du 7 : un emit par morceau
+  | { type: 'split'; cardId: CardId; pawnId: number; steps: number; enter: boolean }
   | { type: 'discard'; cardId: CardId };
 
 /* ************************************************************************** */
@@ -103,11 +103,20 @@ export type GameEvent = {
 // Ce qu'un joueur a le droit de voir : pas la main des autres, pas la pioche.
 export type PlayerView = Omit<Player, 'hand'> & { handCount: number };
 
+// Un coup que je peux jouer, et la case ou il pose mon pion.
+// to = null pour un echange ou une defausse : aucune case a montrer.
+export type LegalMove = {
+  action: GameAction;
+  to: PawnPosition | null;
+};
+
 export type GameView = Omit<Game, 'players' | 'drawPile'> & {
   mySeat: Seat;
   myHand: Card[];
   players: PlayerView[];
   drawPileCount: number;
+  // vide quand ce n'est pas mon tour
+  legalMoves: LegalMove[];
 };
 
 // Le message 'state' envoye a chaque commit.

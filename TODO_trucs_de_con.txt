@@ -1,3 +1,3 @@
-changer tous les "" en ''
+LINT && FORMAT !!
 
 privacy policry et terms of usage !

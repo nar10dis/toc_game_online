@@ -1,15 +1,16 @@
 import { Pawn, Seat, GameAction, PawnPosition, CardValue, BOARD_CELLS_COUNT, Game } from "../game.types"
-import { homeCellIndex, pawnAt, startCell} from "./board"
-import { cardValueOf } from "./deck";
+import { getStartHome, homeCellIndex, pawnAt, startCell} from "./board"
+import { cardFromId, realValueOf } from "./deck";
 import { findPawn } from "./legalMoves";
 import { mod } from "./utils"
+import { simulateSplitStep } from "./split"
 
 export type ActionResult = {
 	pawns: Pawn[]; //nouveau tableau
 	captured: Pawn[] // pions dead pr le front.
 }
 
-function withPosition(pawns: Pawn[], pawnId: number, position: PawnPosition) : Pawn[] {
+export function setPawnPosition(pawns: Pawn[], pawnId: number, position: PawnPosition) : Pawn[] {
 	const result : Pawn[] = [];
 
 	//POSSIBLE DE FAIRE AVEC MAP + TERMAIRE EN CHAD.
@@ -24,12 +25,12 @@ function withPosition(pawns: Pawn[], pawnId: number, position: PawnPosition) : P
 	return result;
 }
 
-function captureAt(pawns: Pawn[], cell: number) : ActionResult {
+export function captureAt(pawns: Pawn[], cell: number) : ActionResult {
 	const victim = pawnAt(pawns, cell);
 
 	if (victim === null)
 		return {pawns, captured: []};
-	return { pawns: withPosition(pawns, victim.id, {zone: 'spawn'}), captured: [victim]};
+	return { pawns: setPawnPosition(pawns, victim.id, {zone: 'spawn'}), captured: [victim]};
 }
 
 
@@ -41,7 +42,7 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 	{
 		case 'move': {
 			const pawn : Pawn | null = findPawn(pawns, action.pawnId);
-			const steps : CardValue = cardValueOf(action.cardId);
+			const steps : number = realValueOf(cardFromId(action.cardId));
 
 			//cannot be true mais TS oblige
 			if (pawn === null || pawn.position.zone === 'spawn')
@@ -51,7 +52,7 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 					const target = pawn.position.cell + steps;
 
 					return ({
-						pawns: withPosition(pawns, pawn.id, { zone: 'home', cell: target }),
+						pawns: setPawnPosition(pawns, pawn.id, { zone: 'home', cell: target }),
 						captured: [],
 					});
 			}
@@ -60,8 +61,20 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 			const hit = captureAt(pawns, target);
 
 			return ({
-				pawns: withPosition(hit.pawns, pawn.id, { zone: 'board', cell: target }),
+				pawns: setPawnPosition(hit.pawns, pawn.id, { zone: 'board', cell: target }),
 				captured: hit.captured,
+			});
+		}
+		case 'enter' : {
+			const pawn : Pawn | null = findPawn(pawns, action.pawnId);
+
+			if (pawn === null || pawn.position.zone !== 'board')
+				return ({pawns, captured: []});
+
+ 			const target = homeCellIndex(seat, pawn.position.cell, realValueOf(cardFromId(action.cardId)));
+			return ({
+				pawns: setPawnPosition(pawns, pawn.id, {zone: 'home', cell: target}),
+				captured: []
 			});
 		}
 		case 'exit' : {
@@ -74,7 +87,7 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 			const hit = captureAt(pawns, target);
 
 			return ({
-				pawns: withPosition(hit.pawns, pawn.id, { zone: 'board', cell: target }),
+				pawns: setPawnPosition(hit.pawns, pawn.id, { zone: 'board', cell: target }),
 				captured: hit.captured,
 			});
 		}
@@ -97,18 +110,13 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 				captured: []
 			});
 		}
-		case 'enter' : {
+		case 'split' : {
 			const pawn : Pawn | null = findPawn(pawns, action.pawnId);
 
-			if (pawn === null || pawn.position.zone !== 'board')
+			if (pawn === null)
 				return ({pawns, captured: []});
-
-			const cardValue : CardValue = cardValueOf(action.cardId);
-			const startOfHome = startCell(seat);
-			const target = pawn.position.cell + cardValue;
-
+			return simulateSplitStep(pawns, pawn, action.steps, action.enter) ?? {pawns, captured: []};
 		}
-
 	}
 	return {pawns, captured: []};
 }

@@ -1,14 +1,23 @@
-import { Card, CardId, Player, CardValue } from '../game.types'
+import { Card, CardId, CardColor, Player, CardValue } from '../game.types'
 import { CARD_VALUES, CARD_COLORS } from '../game.types'
 
 export const PLAYERS_COUNT = 4;
 export const CARDS_PER_HAND = 5;
 
-export function cardValueOf(cardId: CardId): CardValue
+
+export function cardFromId(cardId: CardId): Card
 {
 	const [color, value] = cardId.split('_');
 
-	return (Number(value) as CardValue);
+	return {id : cardId, color: color as CardColor, value: Number(value) as CardValue};
+}
+
+// Le nombre de cases que la carte fait avancer : le 4 fait reculer.
+export function realValueOf(card: Card): number
+{
+	if (card.value === 4)
+		return (-4);
+	return (card.value);
 }
 
 export function createDeck(): Card[] {

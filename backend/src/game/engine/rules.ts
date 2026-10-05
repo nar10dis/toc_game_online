@@ -2,6 +2,7 @@ import { Card, Pawn, Seat, HOME_CELLS_COUNT, BOARD_CELLS_COUNT} from "../game.ty
 import { pawnAt, pathCells, getSeatOfStartCell, pawnsOf,
 	homeLastFreeCell, getStartHome, pawnAtHome, homeCellIndex} from "./board"
 import { mod } from "./utils"
+import { realValueOf } from "./deck"
 
 export function canExit(pawns: Pawn[], card : Card, pawn: Pawn) : boolean {
 
@@ -15,12 +16,12 @@ export function canExit(pawns: Pawn[], card : Card, pawn: Pawn) : boolean {
 	return true;
 }
 
-export function canMove(pawns: Pawn[], card: Card, pawn: Pawn) : boolean {
+export function canMove(pawns: Pawn[], steps: number, pawn: Pawn) : boolean {
 
 	if (pawn.position.zone !== 'board')
 		return false;
 
-	const allCells : number[] = pathCells(pawn.position.cell, card.value);
+	const allCells : number[] = pathCells(pawn.position.cell, steps);
 
 	//si ya un spawn sur son chemin
 	// si le pion a le meme seat que le spawn -> false
@@ -34,7 +35,7 @@ export function canMove(pawns: Pawn[], card: Card, pawn: Pawn) : boolean {
 	return true;
 }
 
-export function canGoHome(pawns : Pawn[], card: Card, pawn: Pawn) : boolean {
+export function canGoHome(pawns : Pawn[], steps: number, pawn: Pawn) : boolean {
 
 	const lastCell = homeLastFreeCell(pawns, pawn.playerSeat);
 	const startHome = getStartHome(pawn.playerSeat);
@@ -43,25 +44,25 @@ export function canGoHome(pawns : Pawn[], card: Card, pawn: Pawn) : boolean {
 			return false;
 	if (pawn.position.zone !== 'board')
 		return false;
-	if (card.value <= 0)
+	if (steps <= 0)
 		return false;
 	const toEntry = mod(startHome - pawn.position.cell, BOARD_CELLS_COUNT);
 	const distanceMax = toEntry + 1 + lastCell;
 
-	const target = homeCellIndex(pawn.playerSeat, pawn.position.cell, card.value);
+	const target = homeCellIndex(pawn.playerSeat, pawn.position.cell, steps);
 	if (target < 0 || target > lastCell)
 		return false;
 	return true;
 }
 
-export function canMoveInHome(pawns: Pawn[], card: Card, pawn: Pawn): boolean {
+export function canMoveInHome(pawns: Pawn[], steps: number, pawn: Pawn): boolean {
 
 	if (pawn.position.zone !== 'home')
 			return false;
-	if (card.value <= 0)
+	if (steps <= 0)
 			return false;
 
-	const target = pawn.position.cell + card.value;
+	const target = pawn.position.cell + steps;
 
 	if (target >= HOME_CELLS_COUNT)
 			return false;
@@ -87,15 +88,18 @@ export function canSwap(pawns: Pawn[], card: Card, pawnA: Pawn, pawnB: Pawn) : b
 
 //permise si cette carte ne permet aucun coup.
 export function canDiscard(pawns: Pawn[], card: Card, seat: Seat) : boolean {
+	//le valet ne fait qu'echanger : seul un echange l'empeche d'etre defausse
+	const isJack = card.value === 11;
+
 	for (const pawn of pawnsOf(pawns, seat))
 	{
 			if (canExit(pawns, card, pawn))
 				return false;
-			if (canMove(pawns, card, pawn))
+			if (!isJack && canMove(pawns, realValueOf(card), pawn))
 				return false;
-			if (canGoHome(pawns, card, pawn))
+			if (!isJack && canGoHome(pawns, realValueOf(card), pawn))
 				return false;
-			if (canMoveInHome(pawns, card, pawn))
+			if (!isJack && canMoveInHome(pawns, realValueOf(card), pawn))
 				return false;
 			for (const other of pawns)
 			{
@@ -105,6 +109,3 @@ export function canDiscard(pawns: Pawn[], card: Card, seat: Seat) : boolean {
 	}
 	return true;
 }
-
-// TO DO LATER
-// export function canSplit()

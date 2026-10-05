@@ -19,6 +19,12 @@ const HOP_TILT_IN_DEGREES = 14;
 /** Kept the same for every pawn, so a moving pawn never changes shape. */
 const PAWN_WOBBLE_SEED = 7;
 
+/** How long a captured pawn takes to burst, then to pop back in its spawn. */
+const DEATH_BURST_DURATION = 0.35;
+const RESPAWN_DURATION = 0.3;
+/** How much it swells as it bursts. */
+const DEATH_BURST_SCALE = 1.8;
+
 /** How the pawn settles when it is not walking the track. */
 const PAWN_SETTLE = {
   type: "spring",
@@ -36,6 +42,8 @@ type PawnProps = {
   position: Point;
   /** Cells it hops over to get there, in order. Empty while it stands still. */
   path?: Point[];
+  /** Set when it was just captured: the cell it dies on, once the killer made `afterSteps` hops. */
+  death?: { from: Point; afterSteps: number } | null;
   /** Makes the pawn shine and clickable. */
   isSelectable?: boolean;
   onClick?: () => void;
@@ -54,6 +62,7 @@ export function Pawn({
   color = "var(--foreground)",
   position,
   path = [],
+  death = null,
   isSelectable = false,
   onClick,
   onArrived,
@@ -109,6 +118,29 @@ export function Pawn({
 
   const walkDuration = path.length * STEP_DURATION_IN_SECONDS;
 
+  //captured: it waits on its cell for the killer, bursts, then pops back in
+  //its spawn. The jump to the spawn happens while it is invisible.
+  let deathTransform = null;
+  let deathTransition = null;
+  if (death) {
+    const waitDuration = death.afterSteps * STEP_DURATION_IN_SECONDS;
+    const totalDuration = waitDuration + DEATH_BURST_DURATION + RESPAWN_DURATION;
+    const burstEnd = (waitDuration + DEATH_BURST_DURATION) / totalDuration;
+
+    deathTransform = {
+      x: [death.from.x, death.from.x, death.from.x, position.x, position.x],
+      y: [death.from.y, death.from.y, death.from.y, position.y, position.y],
+      scale: [1, 1, DEATH_BURST_SCALE, 0.4, 1],
+      rotate: 0,
+      opacity: [1, 1, 0, 0, 1],
+    };
+    deathTransition = {
+      duration: totalDuration,
+      times: [0, waitDuration / totalDuration, burstEnd, burstEnd, 1],
+      ease: "easeOut" as const,
+    };
+  }
+
   //x and y hop from cell to cell, while the swell and the lean run their own
   //keyframes over the same time.
   const walkTransition = {
@@ -125,19 +157,28 @@ export function Pawn({
       onMouseEnter={() => handleHover(true)}
       onMouseLeave={() => handleHover(false)}
       initial={{ x: position.x, y: position.y, scale: 0.4, rotate: 0, opacity: 0 }}
-      animate={isWalking ? walkingTransform : restingTransform}
-      transition={isWalking ? walkTransition : PAWN_SETTLE}
+      animate={isWalking ? walkingTransform : (deathTransform ?? restingTransform)}
+      transition={isWalking ? walkTransition : (deathTransition ?? PAWN_SETTLE)}
       onAnimationComplete={onArrived}
     >
       {isSelectable && (
-        <motion.circle
-          r={PAWN_RADIUS + 10}
-          fill="none"
-          stroke={color}
-          strokeWidth={4}
-          animate={{ scale: [0.9, 1.15, 0.9], opacity: [0.15, 0.75, 0.15] }}
-          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
-        />
+        <>
+          {/* a soft glow of the team colour behind the pawn */}
+          <motion.circle
+            r={PAWN_RADIUS + 14}
+            fill={color}
+            animate={{ opacity: [0.15, 0.4, 0.15] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.circle
+            r={PAWN_RADIUS + 14}
+            fill="none"
+            stroke={color}
+            strokeWidth={6}
+            animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.35, 1, 0.35] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </>
       )}
 
       <motion.path
@@ -147,7 +188,7 @@ export function Pawn({
         strokeWidth={4}
         strokeLinecap="round"
         strokeLinejoin="round"
-        whileHover={isSelectable ? { scale: 1.15 } : undefined}
+        whileHover={isSelectable ? { scale: 1.3 } : undefined}
       />
 
       {/* pen highlight, so the token does not read as a flat blob */}

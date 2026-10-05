@@ -7,6 +7,7 @@ import {
   computeAvatarCoords,
 } from "@/game/boardGeometry";
 import { handDrawnCirclePath } from "@/game/handDrawn";
+import { useBoardRotation } from "@/components/game/Board";
 
 /* ************************************************************************** */
 /*                                 CONST DEF                                  */
@@ -25,7 +26,7 @@ const PICTURE_HEIGHT = 210;
 const PICTURE_WIDTH = 166;
 
 /** One drawing per team, in team order. */
-const TEAM_PICTURES = [
+export const TEAM_PICTURES = [
   "/heart_demon.png",
   "/spade_demon.png",
   "/diamon_demon.png",
@@ -66,6 +67,7 @@ export function PlayerAvatars({
 }: PlayerAvatarsProps) {
   const allTeams = Array.from({ length: TEAMS_NUMBER }, (_, team) => team);
   const shownTeams = allTeams.filter((team) => team !== playerTeam);
+  const boardRotation = useBoardRotation();
 
   return (
     <g>
@@ -110,44 +112,46 @@ export function PlayerAvatars({
         const { x, y } = computeAvatarCoords(team, boardSize);
         const color = TEAM_COLORS[team];
 
+        //turned back around its own centre, so the board's rotation leaves it upright
         return (
-          <motion.g
-            key={`avatar-${team}`}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 + team * 0.1, duration: 0.3 }}
-          >
-            <text
-              className="font-heading font-bold"
-              x={x}
-              y={y - AVATAR_RADIUS - NAME_GAP}
-              textAnchor="middle"
-              fill={color}
-              fontSize={NAME_FONT_SIZE}
+          <g key={`avatar-${team}`} transform={`rotate(${-boardRotation} ${x} ${y})`}>
+            <motion.g
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 + team * 0.1, duration: 0.3 }}
             >
-              {playerNames[team]}
-            </text>
+              <text
+                className="font-heading font-bold"
+                x={x}
+                y={y - AVATAR_RADIUS - NAME_GAP}
+                textAnchor="middle"
+                fill={color}
+                fontSize={NAME_FONT_SIZE}
+              >
+                {playerNames[team]}
+              </text>
 
-            <path
-              d={handDrawnCirclePath(x, y, AVATAR_RADIUS, 5000 + team)}
-              fill={color}
-              fillOpacity={0.14}
-              stroke={color}
-              strokeWidth={5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+              <path
+                d={handDrawnCirclePath(x, y, AVATAR_RADIUS, 5000 + team)}
+                fill={color}
+                fillOpacity={0.14}
+                stroke={color}
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
 
-            {/* the drawing itself, painted in the team colour through its mask */}
-            <rect
-              x={x - PICTURE_WIDTH / 2}
-              y={y - PICTURE_HEIGHT / 2}
-              width={PICTURE_WIDTH}
-              height={PICTURE_HEIGHT}
-              fill={color}
-              mask={`url(#picture-mask-${team})`}
-            />
-          </motion.g>
+              {/* the drawing itself, painted in the team colour through its mask */}
+              <rect
+                x={x - PICTURE_WIDTH / 2}
+                y={y - PICTURE_HEIGHT / 2}
+                width={PICTURE_WIDTH}
+                height={PICTURE_HEIGHT}
+                fill={color}
+                mask={`url(#picture-mask-${team})`}
+              />
+            </motion.g>
+          </g>
         );
       })}
     </g>

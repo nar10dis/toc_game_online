@@ -14,9 +14,13 @@ export type GameState = {
   game: GameView | null;
   /** What just happened, null when there is nothing to animate. */
   lastEvent: GameEvent | null;
+  /** Every move seen since the page opened, oldest first. Empty after a reload. */
+  events: GameEvent[];
   /** True when the server says we are in no game at all. */
   hasNoGame: boolean;
   sendAction: (action: GameAction) => Promise<ActionAnswer>;
+  /** Fast bots for everyone in the game: they play in 1 second. */
+  sendFastBots: (fastBots: boolean) => void;
 };
 
 /**
@@ -26,6 +30,7 @@ export type GameState = {
 export function useGame(): GameState {
   const [game, setGame] = useState<GameView | null>(null);
   const [lastEvent, setLastEvent] = useState<GameEvent | null>(null);
+  const [events, setEvents] = useState<GameEvent[]>([]);
   const [hasNoGame, setHasNoGame] = useState(false);
 
   useEffect(() => {
@@ -35,6 +40,11 @@ export function useGame(): GameState {
       setGame(message.state);
       setLastEvent(message.event);
       setHasNoGame(false);
+      // a 'sync' answer has no event: nothing was played
+      const event = message.event;
+      if (event) {
+        setEvents((previous) => [...previous, event]);
+      }
     }
 
     function handleNoGame() {
@@ -73,5 +83,12 @@ export function useGame(): GameState {
     });
   }
 
-  return { game, lastEvent, hasNoGame, sendAction };
+  // the new value comes back through 'state', like a move
+  function sendFastBots(fastBots: boolean) {
+    if (game) {
+      getSocket().emit("fast-bots", { gameId: game.id, fastBots });
+    }
+  }
+
+  return { game, lastEvent, events, hasNoGame, sendAction, sendFastBots };
 }
