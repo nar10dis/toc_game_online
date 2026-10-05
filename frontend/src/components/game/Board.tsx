@@ -15,8 +15,8 @@ import {
   computeHomeCoords,
   computeSpawnCoords,
   getSeatOfStartCell,
-} from "@/game/boardGeometry";
-import { handDrawnCirclePath } from "@/game/handDrawn";
+} from "@/lib/game/boardGeometry";
+import { handDrawnCirclePath } from "@/lib/game/handDrawn";
 
 /** The arm drawn at the bottom of the screen, before any rotation. */
 const BOTTOM_ARM = 2;

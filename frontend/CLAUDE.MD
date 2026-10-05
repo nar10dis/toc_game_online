@@ -4,7 +4,7 @@ Guidelines for writing frontend code in this Next.js app.
 
 ## Project stack
 
-- **Next.js** (App Router)
+- **Next.js** (Pages Router)
 - **React**
 - **Tailwind CSS**
 - **shadcn/ui**
@@ -141,10 +141,19 @@ export function ProductCard({ title, price = 0, isSoldOut = false, onAddToCart }
 ## File and folder conventions
 
 ```
-app/                  Routes and pages
-components/           Shared components
-components/ui/        shadcn components (don't edit by hand)
-lib/                  Small helper functions
+src/
+  pages/              Routes only (Next.js pages router)
+  components/         React components, one folder per feature (game/, auth/, profile/...)
+  components/ui/      shadcn components (don't edit by hand)
+  hooks/              React hooks (useGame, useFriends...)
+  api/                HTTP calls to the backend
+  sockets/            socket.io connections
+  lib/                Plain helpers, no React components
+  lib/game/           Board geometry, cards, pawns, game types
+  styles/             Global CSS
+public/
+  cards/              Card images
+  demons/             Demon images
 ```
 
 - One component per file, file named after the component: `ProductCard.jsx`.

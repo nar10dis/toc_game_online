@@ -1,21 +1,21 @@
 import { useState } from "react";
 
-import { CardTable } from "@/game/CardTable";
-import { GameLog } from "@/game/GameLog";
-import { SettingsMenu, type GameSettings } from "@/game/SettingsMenu";
-import { DestinationMarkers } from "@/game/DestinationMarkers";
-import { PawnLayer } from "@/game/PawnLayer";
-import { PlayerAvatars } from "@/game/PlayerAvatars";
-import { TEAM_COLORS } from "@/game/boardGeometry";
-import { TurnBanner } from "@/game/TurnBanner";
-import { TurnControls } from "@/game/TurnControls";
-import { WinScreen } from "@/game/WinScreen";
-import { toBoardPawns } from "@/game/boardPawns";
-import { useGame } from "@/game/useGame";
-import { useTurnChoice } from "@/game/useTurnChoice";
+import { CardTable } from "@/components/game/CardTable";
+import { GameLog } from "@/components/game/GameLog";
+import { SettingsMenu, type GameSettings } from "@/components/game/SettingsMenu";
+import { DestinationMarkers } from "@/components/game/DestinationMarkers";
+import { PawnLayer } from "@/components/game/PawnLayer";
+import { PlayerAvatars } from "@/components/game/PlayerAvatars";
+import { TEAM_COLORS } from "@/lib/game/boardGeometry";
+import { TurnBanner } from "@/components/game/TurnBanner";
+import { TurnControls } from "@/components/game/TurnControls";
+import { WinScreen } from "@/components/game/WinScreen";
+import { toBoardPawns } from "@/lib/game/boardPawns";
+import { useGame } from "@/hooks/useGame";
+import { useTurnChoice } from "@/hooks/useTurnChoice";
 import { Header } from "@/components/layout/Header";
 import { CardRule } from "@/components/rules/CardRule";
-import { cardRuleOf } from "@/components/rules/cardRules";
+import { cardRuleOf } from "@/lib/rules/cardRules";
 import { paperStyle } from "@/lib/paperStyle";
 
 import { Board } from "@/components/game/Board";

@@ -7,10 +7,10 @@ import { SparkleTrail } from "@/components/demons/SparkleTrail";
 import { randomBetween } from "@/lib/randomBetween";
 
 const demonImages = [
-  "/club_demon.png",
-  "/diamon_demon.png",
-  "/heart_demon.png",
-  "/spade_demon.png",
+  "/demons/club_demon.png",
+  "/demons/diamond_demon.png",
+  "/demons/heart_demon.png",
+  "/demons/spade_demon.png",
 ];
 
 const oneTurnInMs = 20000;

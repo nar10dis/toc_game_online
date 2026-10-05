@@ -1,14 +1,8 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import { Grenze_Gotisch, Fraunces, Public_Sans } from "next/font/google";
+import { Fraunces, Public_Sans } from "next/font/google";
 
 const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  display: "swap",
-});
-
-const grenzeGotisch = Grenze_Gotisch({
   subsets: ["latin"],
   weight: ["400", "700"],
   display: "swap",

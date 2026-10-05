@@ -6,7 +6,7 @@ import { useRouter } from "next/router";
 import { FriendsLink } from "@/components/friends/FriendsLink";
 import { Button } from "@/components/ui/button";
 import { useIsLogged } from "@/api/user";
-import { connectFriendsSocket } from "@/friends/friendsSocket";
+import { connectFriendsSocket } from "@/sockets/friendsSocket";
 
 export function Header() {
   const router = useRouter();

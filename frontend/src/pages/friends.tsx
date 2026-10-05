@@ -11,7 +11,7 @@ import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useFriends } from "@/friends/useFriends";
+import { useFriends } from "@/hooks/useFriends";
 
 export default function Friends() {
   const router = useRouter();

@@ -5,9 +5,9 @@ import { startGame } from "@/api/game";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
-import { TEAM_COLORS, TEAMS_NUMBER } from "@/game/boardGeometry";
-import { SeatBadge } from "@/game/SeatBadge";
-import { useGame } from "@/game/useGame";
+import { TEAM_COLORS, TEAMS_NUMBER } from "@/lib/game/boardGeometry";
+import { SeatBadge } from "@/components/game/SeatBadge";
+import { useGame } from "@/hooks/useGame";
 
 /** Waiting room: refreshed live by the websocket each time someone joins. */
 export default function Lobby() {

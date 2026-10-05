@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { CardRule } from "@/components/rules/CardRule";
-import { CARD_RULES } from "@/components/rules/cardRules";
+import { CARD_RULES } from "@/lib/rules/cardRules";
 import { RulesSidebar, type RuleSection } from "@/components/rules/RulesSidebar";
 import { WornFrame } from "@/components/layout/WornFrame";
 

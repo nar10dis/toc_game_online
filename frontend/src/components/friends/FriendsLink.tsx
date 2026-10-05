@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 
 import { Button } from "@/components/ui/button";
-import { useFriends } from "@/friends/useFriends";
+import { useFriends } from "@/hooks/useFriends";
 
 export function FriendsLink() {
   const router = useRouter();
