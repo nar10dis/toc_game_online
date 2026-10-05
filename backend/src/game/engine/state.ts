@@ -24,7 +24,6 @@ export function initGame(id: number, inviteCode: string): Game
 				currentSeat: 0,
 				winner: null,
 				pendingSplit: null,
-				fastBots: false,
 		}
 	return newGame;
 }
