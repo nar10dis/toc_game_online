@@ -66,6 +66,9 @@ export default function Lobby() {
             if (player) {
               name = player.pseudo;
             }
+            if (player && !player.isConnected) {
+              name = `${name} (disconnected, a bot will play)`;
+            }
             if (seat === game.mySeat) {
               name = `${name} (you)`;
             }

@@ -16,6 +16,10 @@ export function TurnControls({ game, turnChoice }: TurnControlsProps) {
     return <h2 className="text-2xl font-bold">{game.players[game.winner].pseudo} a gagné !</h2>;
   }
 
+  if (!isMyTurn && !currentPlayer.isConnected) {
+    return <h2 className="text-xl">{currentPlayer.pseudo} est parti, l&apos;IA joue à sa place...</h2>;
+  }
+
   if (!isMyTurn) {
     return <h2 className="text-xl">Tour de {currentPlayer.pseudo}...</h2>;
   }

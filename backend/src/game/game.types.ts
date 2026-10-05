@@ -53,6 +53,9 @@ export type Player = {
 
 export const isAI = (player: Player): boolean => player.userId === null;
 
+// un humain deconnecte garde son siege, mais l'IA joue a sa place jusqu'a son retour
+export const isBotControlled = (player: Player): boolean => isAI(player) || !player.isConnected;
+
 /* ************************************************************************** */
 /*                                 5. GAME                                    */
 /* ************************************************************************** */
