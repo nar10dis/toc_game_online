@@ -6,13 +6,12 @@ import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './en
 import { chooseAIAction } from './engine/AI';
 
 // Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
-// Un bot "reflechit" entre 2 et 3 secondes avant de jouer une carte.
-const BOT_MIN_DELAY_MS = 2000;
+// Un bot "reflechit" entre 1 et 3 secondes avant de jouer.
+const BOT_MIN_DELAY_MS = 1000;
 const BOT_MAX_DELAY_MS = 3000;
-// La suite d'un 7 deja commence : on n'attend pas autant a chaque morceau.
-const BOT_SPLIT_DELAY_MS = 1000;
-// IA rapide (option des parametres) : 1 seconde par coup.
-const BOT_FAST_DELAY_MS = 1000;
+// Temps laisse a un joueur pour revenir (refresh, jwt expire, coupure wifi)
+// avant que l'IA ne prenne sa place.
+const RECONNECT_GRACE_MS = 5000;
 
 @Injectable()
 export class GameService {
@@ -172,31 +171,17 @@ export class GameService {
         void this.runBots(gameId);
     }
 
-<<<<<<< HEAD
     // Fait jouer les bots (et l'IA qui remplace un deconnecte) tant que c'est a eux, un commit par coup.
     // La partie est relue dans la Map a chaque tour : pendant la pause, un joueur
     // a pu revenir, partir, ou la partie a pu etre abandonnee.
-=======
-    // N'importe quel joueur de la partie peut activer l'IA rapide, pour tout le monde.
-    setFastBots(gameId: number, userId: number, fastBots: boolean) {
-        const game = this.games.get(gameId);
-        if (!game)
-            throw new NotFoundException('Game not found');
-        if (!game.players.some(p => p.userId === userId))
-            throw new ForbiddenException('You are not in this game');
-
-        this.commit({ ...game, fastBots });
-    }
-
-    // Fait jouer les bots tant que c'est a eux, un commit par coup.
->>>>>>> nardis_dev
     private async runBots(gameId: number) {
         if (this.botLoops.has(gameId))
             return;
         this.botLoops.add(gameId);
         try {
             while (this.botToPlay(gameId)) {
-                await new Promise(resolve => setTimeout(resolve, BOT_DELAY_MS));
+                const delay = BOT_MIN_DELAY_MS + Math.random() * (BOT_MAX_DELAY_MS - BOT_MIN_DELAY_MS);
+                await new Promise(resolve => setTimeout(resolve, delay));
                 const game = this.botToPlay(gameId);
                 if (!game)
                     break;
@@ -213,7 +198,6 @@ export class GameService {
         }
     }
 
-<<<<<<< HEAD
     // La partie si c'est a un bot de jouer, sinon null.
     private botToPlay(gameId: number): GameTypes.Game | null {
         const game = this.games.get(gameId);
@@ -281,26 +265,6 @@ export class GameService {
         }
         catch (error) {
             console.error(`abandonGame ${gameId}:`, error);
-=======
-        while (game && game.phase === 'playing' && GameTypes.isAI(game.players[game.currentSeat])) {
-            let delay = BOT_MIN_DELAY_MS + Math.random() * (BOT_MAX_DELAY_MS - BOT_MIN_DELAY_MS);
-            if (game.pendingSplit !== null)
-                delay = BOT_SPLIT_DELAY_MS;
-            if (game.fastBots)
-                delay = BOT_FAST_DELAY_MS;
-            await new Promise(resolve => setTimeout(resolve, delay));
-            // la partie a pu changer pendant la pause (IA rapide cochee) : on la relit
-            game = this.games.get(gameId);
-            if (!game || game.phase !== 'playing')
-                break;
-            const seat = game.currentSeat;
-            const action = chooseAIAction(game, seat);
-            const out = action && playTurn(game, seat, action);
-            if (!out)
-                break;
-            game = out.game;
-            this.commit(game, out.event);
->>>>>>> nardis_dev
         }
     }
 }
