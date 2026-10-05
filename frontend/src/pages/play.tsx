@@ -7,6 +7,7 @@ import { DestinationMarkers } from "@/game/DestinationMarkers";
 import { PawnLayer } from "@/game/PawnLayer";
 import { PlayerAvatars } from "@/game/PlayerAvatars";
 import { TEAM_COLORS } from "@/game/boardGeometry";
+import { TurnBanner } from "@/game/TurnBanner";
 import { TurnControls } from "@/game/TurnControls";
 import { WinScreen } from "@/game/WinScreen";
 import { toBoardPawns } from "@/game/boardPawns";
@@ -78,7 +79,11 @@ export default function Play() {
           <div style={{ position: "relative", width: BOARD_SIDE, height: BOARD_SIDE }}>
             {/* everyone sees the board from their own seat, at the bottom */}
             <Board bottomSeat={game.mySeat} showIndexes={settings.showCellIndexes}>
-              <PlayerAvatars playerTeam={game.mySeat} playerNames={playerNames} />
+              <PlayerAvatars
+                playerTeam={game.mySeat}
+                playerNames={playerNames}
+                currentSeat={game.phase === "playing" ? game.currentSeat : null}
+              />
               <PawnLayer
                 pawns={toBoardPawns(game.pawns, lastEvent)}
                 selectablePawnIds={turnChoice.selectablePawnIds}
@@ -102,6 +107,7 @@ export default function Play() {
                 onCardClick={turnChoice.handleCardClick}
               />
             )}
+            <TurnBanner isMyTurn={isMyTurn} mySeat={game.mySeat} />
           </div>
         </div>
 

@@ -1,4 +1,6 @@
+import { TEAM_COLORS } from "@/game/boardGeometry";
 import type { GameView } from "@/game/gameTypes";
+import { SeatBadge } from "@/game/SeatBadge";
 import type { TurnChoice } from "@/game/useTurnChoice";
 
 type TurnControlsProps = {
@@ -15,12 +17,25 @@ export function TurnControls({ game, turnChoice }: TurnControlsProps) {
     return <h2 className="text-2xl font-bold">{game.players[game.winner].pseudo} a gagné !</h2>;
   }
 
-  if (!isMyTurn && !currentPlayer.isConnected) {
-    return <h2 className="text-xl">{currentPlayer.pseudo} est parti, l&apos;IA joue à sa place...</h2>;
-  }
+  // the demon of whoever plays, in its colour, like the one pulsing on the board
+  const name = (
+    <span className="font-bold" style={{ color: TEAM_COLORS[game.currentSeat] }}>
+      {currentPlayer.pseudo}
+    </span>
+  );
 
   if (!isMyTurn) {
-    return <h2 className="text-xl">Tour de {currentPlayer.pseudo}...</h2>;
+    let waitingText = <>Tour de {name}...</>;
+    if (!currentPlayer.isConnected) {
+      waitingText = <>{name} est parti, l&apos;IA joue à sa place...</>;
+    }
+
+    return (
+      <div className="flex items-center gap-3">
+        <SeatBadge seat={game.currentSeat} isTaken className="size-14 shrink-0" />
+        <h2 className="text-xl">{waitingText}</h2>
+      </div>
+    );
   }
 
   const isJack = turnChoice.selectedCardValue === 11;
@@ -41,7 +56,10 @@ export function TurnControls({ game, turnChoice }: TurnControlsProps) {
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <h2 className="text-xl font-bold">{hint}</h2>
+      <div className="flex items-center gap-3">
+        <SeatBadge seat={game.mySeat} isTaken className="size-14 shrink-0" />
+        <h2 className="text-xl font-bold">{hint}</h2>
+      </div>
 
       {turnChoice.errorMessage && (
         <p className="text-sm text-destructive">Refusé : {turnChoice.errorMessage}</p>
