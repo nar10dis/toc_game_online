@@ -124,3 +124,17 @@ export type StateMessage = {
   state: GameView;
   event: GameEvent | null;
 };
+
+/* ************************************************************************** */
+/*                                 8. CHAT                                    */
+/* ************************************************************************** */
+export const MAX_CHAT_MESSAGE_LENGTH = 200;
+
+// Un message du chat de la partie. Garde en memoire seulement, comme la partie.
+export type ChatMessage = {
+  id: number;
+  seat: Seat;
+  pseudo: string;
+  text: string;
+  sentAt: number;
+};

@@ -92,3 +92,16 @@ export type StateMessage = {
 
 /** Answer of the server to an 'action' message. */
 export type ActionAnswer = { ok: true } | { error: string };
+
+/** Longest chat message the server accepts. */
+export const MAX_CHAT_MESSAGE_LENGTH = 200;
+
+/** One message of the game chat. */
+export type ChatMessage = {
+  id: number;
+  seat: Seat;
+  pseudo: string;
+  text: string;
+  /** Milliseconds since 1970, from the server clock. */
+  sentAt: number;
+};

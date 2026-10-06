@@ -140,7 +140,7 @@ export function GameLog({ events, playerNames }: GameLogProps) {
         <p className="mt-2 text-sm text-muted-foreground">Aucun coup pour l&apos;instant.</p>
       )}
 
-      <ul className="mt-2 flex max-h-[45vh] flex-col gap-2 overflow-y-auto pr-1 text-sm">
+      <ul className="mt-2 flex h-[22vh] flex-col gap-2 overflow-y-auto pr-1 text-sm">
         <AnimatePresence initial={false}>
           {entries.map((entry) => (
             <motion.li

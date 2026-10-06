@@ -16,6 +16,8 @@ const BOT_FAST_DELAY_MS = 1000;
 // Temps laisse a un joueur pour revenir (refresh, jwt expire, coupure wifi)
 // avant que l'IA ne prenne sa place.
 const RECONNECT_GRACE_MS = 5000;
+// Messages de chat gardes par partie : les plus vieux sont oublies.
+const MAX_CHAT_HISTORY = 50;
 
 @Injectable()
 export class GameService {
@@ -26,6 +28,9 @@ export class GameService {
     private disconnectTimers = new Map<number, NodeJS.Timeout>();
     // une seule boucle de bots par partie, sinon deux bots jouent le meme tour
     private botLoops = new Set<number>();
+    // gameId -> derniers messages du chat, renvoyes a un client qui (re)arrive
+    private chats = new Map<number, GameTypes.ChatMessage[]>();
+    private nextChatMessageId = 1;
     // donne par la gateway -> envoie letat du game a tous les clients de la partie.
     private broadcast?: (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void;
 
@@ -219,6 +224,40 @@ export class GameService {
         }
     }
 
+    /* ********************************************************************** */
+    /*                                   CHAT                                 */
+    /* ********************************************************************** */
+
+    // Ajoute le message a l'historique. La gateway se charge de l'envoyer.
+    sendChat(gameId: number, userId: number, text: unknown) {
+        const game = this.games.get(gameId);
+        if (!game)
+            throw new NotFoundException('Game not found');
+        const player = game.players.find(p => p.userId === userId);
+        if (!player)
+            throw new ForbiddenException('You are not in this game');
+        if (typeof text !== 'string')
+            throw new BadRequestException('Invalid message');
+        const trimmed = text.trim();
+        if (trimmed.length === 0 || trimmed.length > GameTypes.MAX_CHAT_MESSAGE_LENGTH)
+            throw new BadRequestException('Invalid message');
+
+        const message: GameTypes.ChatMessage = {
+            id: this.nextChatMessageId++,
+            seat: player.seat,
+            pseudo: player.pseudo,
+            text: trimmed,
+            sentAt: Date.now(),
+        };
+        const history = [...(this.chats.get(gameId) ?? []), message].slice(-MAX_CHAT_HISTORY);
+        this.chats.set(gameId, history);
+        return { game, message };
+    }
+
+    getChat(gameId: number): GameTypes.ChatMessage[] {
+        return this.chats.get(gameId) ?? [];
+    }
+
     // La partie si c'est a un bot de jouer, sinon null.
     private botToPlay(gameId: number): GameTypes.Game | null {
         const game = this.games.get(gameId);
@@ -278,6 +317,7 @@ export class GameService {
     // Partie terminee sans gagnant (winnerSeat null) : tous les humains sont partis.
     private async abandonGame(gameId: number) {
         this.games.delete(gameId);
+        this.chats.delete(gameId);
         try {
             await this.prisma.game.update({
                 where: { idGame: gameId },
