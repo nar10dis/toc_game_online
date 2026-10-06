@@ -1,5 +1,9 @@
-FROM docker.elastic.co/logstash/logstash:9.5.4
+FROM docker.elastic.co/logstash/logstash:9.5.5
 
-# RUN rm -f /usr/share/logstash/pipeline/*
+USER root
+
+RUN rm -f /usr/share/logstash/pipeline/*
+
+RUN echo "allow_superuser: true" >> /usr/share/logstash/config/logstash.yml
 
 COPY pipeline/ /usr/share/logstash/pipeline/
