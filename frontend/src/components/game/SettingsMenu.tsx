@@ -7,13 +7,10 @@ export type GameSettings = {
 type SettingsMenuProps = {
   settings: GameSettings;
   onChange: (settings: GameSettings) => void;
-  /** Lives on the server: the bots play there. */
-  fastBots: boolean;
-  onFastBotsChange: (fastBots: boolean) => void;
 };
 
 /** Display options of the game. Folds away on a click on its title, like the log. */
-export function SettingsMenu({ settings, onChange, fastBots, onFastBotsChange }: SettingsMenuProps) {
+export function SettingsMenu({ settings, onChange }: SettingsMenuProps) {
   return (
     <details open className="mt-6 w-full">
       <summary className="cursor-pointer font-heading text-lg font-bold">Paramètres</summary>
@@ -34,14 +31,6 @@ export function SettingsMenu({ settings, onChange, fastBots, onFastBotsChange }:
             onChange={(event) => onChange({ ...settings, showTutorial: event.target.checked })}
           />
           Afficher le tuto
-        </label>
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={fastBots}
-            onChange={(event) => onFastBotsChange(event.target.checked)}
-          />
-          IA rapide
         </label>
       </div>
     </details>

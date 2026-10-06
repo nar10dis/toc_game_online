@@ -26,7 +26,7 @@ import { Board } from "@/components/game/Board";
 const BOARD_SIDE = "min(100cqw, 100cqh)";
 
 export default function Play() {
-  const { game, lastEvent, events, hasNoGame, sendAction, sendFastBots } = useGame();
+  const { game, lastEvent, events, hasNoGame, sendAction } = useGame();
   const turnChoice = useTurnChoice(game, sendAction);
   let gameId: number | null = null;
   if (game) {
@@ -70,12 +70,7 @@ export default function Play() {
                 </CardRule>
               </div>
             )}
-            <SettingsMenu
-              settings={settings}
-              onChange={setSettings}
-              fastBots={game.fastBots}
-              onFastBotsChange={sendFastBots}
-            />
+            <SettingsMenu settings={settings} onChange={setSettings} />
           </div>
         </aside>
 

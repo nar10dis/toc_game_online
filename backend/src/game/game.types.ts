@@ -73,8 +73,6 @@ export type Game = {
   winner: Seat | null;
   // null = pas de 7 en cours, sinon il reste `left` pas a jouer avec cette carte
   pendingSplit: { cardId: CardId; left: number } | null;
-  // IA rapide : les bots jouent en 1 seconde
-  fastBots: boolean;
 };
 
 /* ************************************************************************** */
