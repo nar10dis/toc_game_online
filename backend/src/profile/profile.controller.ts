@@ -5,7 +5,7 @@ import type { Response } from 'express';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AuthGuard } from '../auth/guards/jwt-auth.guard';
-import { currentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ACCESS_COOKIE_OPTIONS } from '../auth/cookies';
 import { AVATAR_MAX_BYTES } from './avatar-storage';
 
@@ -15,7 +15,7 @@ export class ProfileController {
 
   @UseGuards(AuthGuard)
   @Get()
-  findOne(@currentUser() user: { sub: number }) {
+  findOne(@CurrentUser() user: { sub: number }) {
     return this.profileService.findOne(user.sub);
   }
 
@@ -27,7 +27,7 @@ export class ProfileController {
   
   @UseGuards(AuthGuard)
   @Patch()
-  async update(@currentUser() user: { sub: number }, @Body() updateProfileDto: UpdateProfileDto, @Res({ passthrough: true }) res: Response) {
+  async update(@CurrentUser() user: { sub: number }, @Body() updateProfileDto: UpdateProfileDto, @Res({ passthrough: true }) res: Response) {
     const profile = await this.profileService.update(user.sub, updateProfileDto);
 
     // Le pseudo est dans le jwt, sinon l'ancien reste affiche 15 min
@@ -41,13 +41,13 @@ export class ProfileController {
   @UseGuards(AuthGuard)
   @Post('avatar')
   @UseInterceptors(FileInterceptor('avatar', { limits: { fileSize: AVATAR_MAX_BYTES } }))
-  updateAvatar(@currentUser() user: { sub: number }, @UploadedFile() file: { buffer: Buffer } | undefined) {
+  updateAvatar(@CurrentUser() user: { sub: number }, @UploadedFile() file: { buffer: Buffer } | undefined) {
     return this.profileService.updateAvatar(user.sub, file);
   }
 
   @UseGuards(AuthGuard)
   @Delete('avatar')
-  removeAvatar(@currentUser() user: { sub: number }) {
+  removeAvatar(@CurrentUser() user: { sub: number }) {
     return this.profileService.removeAvatar(user.sub);
   }
 

@@ -4,6 +4,7 @@ import { RegisterDTO } from './dto/register.dto';
 import { ChangePasswordDTO } from './dto/change-password.dto';
 import { AuthGuard } from './guards/jwt-auth.guard';
 import type { Response, Request } from 'express';
+import { CurrentUser, type JwtPayload } from './decorators/current-user.decorator';
 import { ACCESS_COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } from './cookies';
 
 @Controller('auth')
@@ -58,9 +59,9 @@ export class AuthController {
 
     @UseGuards(AuthGuard)
     @Post('logout')
-    async logout(@Res({ passthrough: true }) res: Response, @Req() req: Request, )
+    async logout(@Res({ passthrough: true }) res: Response, @CurrentUser() user: JwtPayload )
     {
-        await this.authService.logout((req as any).user.sub);
+        await this.authService.logout(user.sub);
         res.clearCookie('jwt');
         res.clearCookie('refresh_token');
         return { message: 'Successfully logout'};

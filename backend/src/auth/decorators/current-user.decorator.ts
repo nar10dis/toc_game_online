@@ -1,9 +1,15 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
-// @currentUser() dans un controller = req.user (le payload du jwt, mis par l'AuthGuard)
-export const currentUser = createParamDecorator(
-    (data: unknown, context: ExecutionContext) => {
-        const req = context.switchToHttp().getRequest();
-        return req.user;
-    },
+export interface JwtPayload {
+    sub: number;
+    username: string;
+}
+
+export const CurrentUser = createParamDecorator(
+    (
+        (data: unknown, ctx: ExecutionContext): JwtPayload => {
+            return ctx.switchToHttp().getRequest().user;
+            
+        }
+    )
 );
