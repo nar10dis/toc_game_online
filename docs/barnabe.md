@@ -66,41 +66,40 @@ Techno: Next.js (avec React)
 Rôle dans le projet: Le frontend, c'est-à-dire ce qui s'affiche dans ton navigateur. React
 construit l'interface en petits blocs réutilisables appelés composants. Next.js organise
 ces blocs en pages.
-──────────────────────────────
+────────────────────────────────────────
 Techno: Tailwind / shadcn/ui / motion
 Rôle dans le projet: Le style et les animations : Tailwind pour les classes CSS, shadcn
-pour des boutons et champs déjles pions et les cartes.
+pour des boutons et champs déjà prêts, motion pour animer les pions et les cartes.
 ────────────────────────────────────────
 Techno: NestJS
 Rôle dans le projet: Le backend, le programme serveur qui contient la logique. C'est un
-framework (une structure imposules bien séparés.
+framework (une structure imposée) qui range le code en modules bien séparés.
 ────────────────────────────────────────
 Techno: Socket.io (WebSocket)
-Rôle dans le projet: La communebSocket est une connexion qui
+Rôle dans le projet: La communication en temps réel. Une WebSocket est une connexion qui
 reste ouverte, comme un appel téléphonique, alors qu'une requête HTTP classique ressemble
  plutôt à une lettre envoyée puis répondue. Le serveur peut ainsi prévenir tous les
 joueurs dès qu'un coup est joué.
 ────────────────────────────────────────
 Techno: PostgreSQL
-Rôle dans le projet: La base de données, où sont stockés les utilisateurs, profils,
-amitiés
+Rôle dans le projet: La base de données, où sont stockés les utilisateurs, profils, amitiés
 et parties.
-──────────────────────────────
+────────────────────────────────────────
 Techno: Prisma
 Rôle dans le projet: Un ORM : un traducteur qui permet de manipuler la base avec du code
-TypeScript (prisma.user.findUndu SQL.
+TypeScript (prisma.user.findUnique(...)) au lieu d'écrire du SQL.
 ────────────────────────────────────────
 Techno: JWT + bcrypt
-Rôle dans le projet: La sécurisigné que le serveur te remet à
+Rôle dans le projet: La sécurité. Un JWT est un « badge » signé que le serveur te remet à
 la connexion, rangé dans un cookie. bcrypt transforme les mots de passe en empreinte
 illisible (hash) avant de les stocker.
-──────────────────────────────
+────────────────────────────────────────
 Techno: nginx
 Rôle dans le projet: Un reverse proxy : la porte d'entrée unique, qui gère le HTTPS et
 redirige chaque requête vers le bon service.
-──────────────────────────────
+────────────────────────────────────────
 Techno: Docker Compose
-Rôle dans le projet: Lance lesnd, backend, postgres), chacun
+Rôle dans le projet: Lance les 4 programmes (nginx, frontend, backend, postgres), chacun
 dans sa petite machine isolée (conteneur), avec une seule commande.
 
 L'arborescence
