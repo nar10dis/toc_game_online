@@ -115,19 +115,8 @@ export function applyAction(pawns: Pawn[], seat: Seat, action: GameAction) : Act
 
 			if (pawn === null)
 				return ({pawns, captured: []});
-<<<<<<< HEAD
-
-			const cardValue : CardValue = cardValueOf(action.cardId);
-			const startOfHome = startCell(seat);
-			const target = pawn.position.cell + cardValue;
-
-			// if (mod(pawn.position.cell + cardValue, BOARD_CELLS_COUNT) )
-			}
-
-=======
 			return simulateSplitStep(pawns, pawn, action.steps, action.enter) ?? {pawns, captured: []};
 		}
->>>>>>> dev
 	}
 	return {pawns, captured: []};
 }

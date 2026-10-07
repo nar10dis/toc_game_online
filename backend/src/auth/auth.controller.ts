@@ -4,11 +4,8 @@ import { RegisterDTO } from './dto/register.dto';
 import { ChangePasswordDTO } from './dto/change-password.dto';
 import { AuthGuard } from './guards/jwt-auth.guard';
 import type { Response, Request } from 'express';
-<<<<<<< HEAD
 import { CurrentUser, type JwtPayload } from './decorators/current-user.decorator';
-=======
 import { ACCESS_COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } from './cookies';
->>>>>>> dev
 
 @Controller('auth')
 export class AuthController {
