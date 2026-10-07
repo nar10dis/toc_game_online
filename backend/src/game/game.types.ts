@@ -61,6 +61,10 @@ export const isBotControlled = (player: Player): boolean => isAI(player) || !pla
 /* ************************************************************************** */
 export type GamePhase = 'waiting' | 'playing' | 'finished';
 
+// La difficulte d'un bot, choisie par l'hote dans la salle d'attente.
+export const AI_LEVELS = ['easy', 'medium', 'hard'] as const;
+export type AILevel = (typeof AI_LEVELS)[number];
+
 export type Game = {
   id: number;
   inviteCode: string;
@@ -73,6 +77,8 @@ export type Game = {
   winner: Seat | null;
   // null = pas de 7 en cours, sinon il reste `left` pas a jouer avec cette carte
   pendingSplit: { cardId: CardId; left: number } | null;
+  // un niveau par siege (index = siege), utilise si un bot joue a cette place
+  aiLevels: AILevel[];
 };
 
 /* ************************************************************************** */

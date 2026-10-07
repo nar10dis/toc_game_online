@@ -17,6 +17,7 @@ import { Header } from "@/components/layout/Header";
 import { CardRule } from "@/components/rules/CardRule";
 import { cardRuleOf } from "@/lib/rules/cardRules";
 import { paperStyle } from "@/lib/paperStyle";
+import type { CardId } from "@/lib/game/gameTypes";
 
 import { Board } from "@/components/game/Board";
 
@@ -41,6 +42,14 @@ export default function Play() {
     const playerNames = ["", "", "", ""];
     for (const player of game.players) {
       playerNames[player.seat] = player.pseudo;
+    }
+    //a card is unique in the deck: the last move made with it says who played it.
+    //Unknown after a reload, those cards just have no outline.
+    const playedCardColors: Partial<Record<CardId, string>> = {};
+    for (const event of events) {
+      if ("cardId" in event.action) {
+        playedCardColors[event.action.cardId] = TEAM_COLORS[event.seat];
+      }
     }
     const selectedRule = turnChoice.selectedCardId
       ? cardRuleOf(turnChoice.selectedCardValue)
@@ -97,6 +106,7 @@ export default function Play() {
               <CardTable
                 hand={game.myHand}
                 discardPile={game.discardPile}
+                playedCardColors={playedCardColors}
                 selectedCardId={turnChoice.selectedCardId}
                 canPickCard={isMyTurn && !turnChoice.isSplitInProgress}
                 onCardClick={turnChoice.handleCardClick}

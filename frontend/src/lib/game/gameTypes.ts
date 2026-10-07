@@ -29,6 +29,10 @@ export type Pawn = {
 
 export type GamePhase = "waiting" | "playing" | "finished";
 
+/** Difficulty of a bot, chosen by the host in the waiting room. */
+export const AI_LEVELS = ["easy", "medium", "hard"] as const;
+export type AILevel = (typeof AI_LEVELS)[number];
+
 export type PlayerView = {
   // null for a bot
   userId: number | null;
@@ -58,6 +62,8 @@ export type GameView = {
   winner: Seat | null;
   // null = no 7 in progress, otherwise `left` steps remain to play with this card
   pendingSplit: { cardId: CardId; left: number } | null;
+  /** One level per seat (index = seat), used when a bot plays there. */
+  aiLevels: AILevel[];
   mySeat: Seat;
   myHand: Card[];
   drawPileCount: number;
