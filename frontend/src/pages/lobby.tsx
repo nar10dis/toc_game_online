@@ -5,8 +5,9 @@ import { startGame } from "@/api/game";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
-import { TEAM_COLORS, TEAMS_NUMBER } from "@/game/boardGeometry";
-import { useGame } from "@/game/useGame";
+import { TEAM_COLORS, TEAMS_NUMBER } from "@/lib/game/boardGeometry";
+import { SeatBadge } from "@/components/game/SeatBadge";
+import { useGame } from "@/hooks/useGame";
 
 /** Waiting room: refreshed live by the websocket each time someone joins. */
 export default function Lobby() {
@@ -59,19 +60,32 @@ export default function Lobby() {
           <p className="mt-4 font-heading text-4xl font-bold tracking-widest">{game.inviteCode}</p>
         </div>
 
-        <ul className="flex flex-col gap-2 text-lg">
+        <ul className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {seats.map((seat) => {
             const player = game.players.find((onePlayer) => onePlayer.seat === seat);
-            let name = "Bot (if nobody comes)";
+            const isTaken = player !== undefined;
+            let name = "Empty seat";
             if (player) {
               name = player.pseudo;
+            }
+            if (player && !player.isConnected) {
+              name = `${name} (disconnected, a bot will play)`;
             }
             if (seat === game.mySeat) {
               name = `${name} (you)`;
             }
             return (
-              <li key={seat} style={{ color: TEAM_COLORS[seat] }} className="font-bold">
-                {name}
+              <li key={seat} className="flex flex-col items-center gap-2">
+                <SeatBadge seat={seat} isTaken={isTaken} className="size-28 md:size-32" />
+                <span
+                  className="font-heading text-lg font-bold"
+                  style={{ color: isTaken ? TEAM_COLORS[seat] : undefined }}
+                >
+                  {name}
+                </span>
+                {!isTaken && (
+                  <span className="text-sm text-muted-foreground">A bot plays if nobody comes</span>
+                )}
               </li>
             );
           })}

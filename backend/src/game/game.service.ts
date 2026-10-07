@@ -6,13 +6,27 @@ import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './en
 import { chooseAIAction } from './engine/AI';
 
 // Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
-const BOT_DELAY_MS = 1000;
+// Un bot "reflechit" entre 1 et 3 secondes avant de jouer.
+const BOT_MIN_DELAY_MS = 1000;
+const BOT_MAX_DELAY_MS = 3000;
+// Temps laisse a un joueur pour revenir (refresh, jwt expire, coupure wifi)
+// avant que l'IA ne prenne sa place.
+const RECONNECT_GRACE_MS = 5000;
+// Messages de chat gardes par partie : les plus vieux sont oublies.
+const MAX_CHAT_HISTORY = 50;
 
 @Injectable()
 export class GameService {
     constructor(private prisma: PrismaService) {}
 
     private games = new Map<number, GameTypes.Game>();
+    // userId -> timer qui le declarera deconnecte s'il ne revient pas a temps
+    private disconnectTimers = new Map<number, NodeJS.Timeout>();
+    // une seule boucle de bots par partie, sinon deux bots jouent le meme tour
+    private botLoops = new Set<number>();
+    // gameId -> derniers messages du chat, renvoyes a un client qui (re)arrive
+    private chats = new Map<number, GameTypes.ChatMessage[]>();
+    private nextChatMessageId = 1;
     // donne par la gateway -> envoie letat du game a tous les clients de la partie.
     private broadcast?: (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void;
 
@@ -162,19 +176,135 @@ export class GameService {
         void this.runBots(gameId);
     }
 
-    // Fait jouer les bots tant que c'est a eux, un commit par coup.
+    // Fait jouer les bots (et l'IA qui remplace un deconnecte) tant que c'est a eux, un commit par coup.
+    // La partie est relue dans la Map a chaque tour : pendant la pause, un joueur
+    // a pu revenir, partir, ou la partie a pu etre abandonnee.
     private async runBots(gameId: number) {
-        let game = this.games.get(gameId);
+        if (this.botLoops.has(gameId))
+            return;
+        this.botLoops.add(gameId);
+        try {
+            while (this.botToPlay(gameId)) {
+                const delay = BOT_MIN_DELAY_MS + Math.random() * (BOT_MAX_DELAY_MS - BOT_MIN_DELAY_MS);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                const game = this.botToPlay(gameId);
+                if (!game)
+                    break;
+                const seat = game.currentSeat;
+                const action = chooseAIAction(game, seat);
+                const out = action && playTurn(game, seat, action);
+                if (!out)
+                    break;
+                this.commit(out.game, out.event);
+            }
+        }
+        finally {
+            this.botLoops.delete(gameId);
+        }
+    }
 
-        while (game && game.phase === 'playing' && GameTypes.isAI(game.players[game.currentSeat])) {
-            await new Promise(resolve => setTimeout(resolve, BOT_DELAY_MS));
-            const seat = game.currentSeat;
-            const action = chooseAIAction(game, seat);
-            const out = action && playTurn(game, seat, action);
-            if (!out)
-                break;
-            game = out.game;
-            this.commit(game, out.event);
+    /* ********************************************************************** */
+    /*                                   CHAT                                 */
+    /* ********************************************************************** */
+
+    // Ajoute le message a l'historique. La gateway se charge de l'envoyer.
+    sendChat(gameId: number, userId: number, text: unknown) {
+        const game = this.games.get(gameId);
+        if (!game)
+            throw new NotFoundException('Game not found');
+        const player = game.players.find(p => p.userId === userId);
+        if (!player)
+            throw new ForbiddenException('You are not in this game');
+        if (typeof text !== 'string')
+            throw new BadRequestException('Invalid message');
+        const trimmed = text.trim();
+        if (trimmed.length === 0 || trimmed.length > GameTypes.MAX_CHAT_MESSAGE_LENGTH)
+            throw new BadRequestException('Invalid message');
+
+        const message: GameTypes.ChatMessage = {
+            id: this.nextChatMessageId++,
+            seat: player.seat,
+            pseudo: player.pseudo,
+            text: trimmed,
+            sentAt: Date.now(),
+        };
+        const history = [...(this.chats.get(gameId) ?? []), message].slice(-MAX_CHAT_HISTORY);
+        this.chats.set(gameId, history);
+        return { game, message };
+    }
+
+    getChat(gameId: number): GameTypes.ChatMessage[] {
+        return this.chats.get(gameId) ?? [];
+    }
+
+    // La partie si c'est a un bot de jouer, sinon null.
+    private botToPlay(gameId: number): GameTypes.Game | null {
+        const game = this.games.get(gameId);
+        if (!game || game.phase !== 'playing')
+            return null;
+        if (!GameTypes.isBotControlled(game.players[game.currentSeat]))
+            return null;
+        return game;
+    }
+
+    /* ********************************************************************** */
+    /*                          CONNEXION / DECONNEXION                       */
+    /* ********************************************************************** */
+
+    // Appele par la gateway a chaque socket qui arrive.
+    userConnected(userId: number) {
+        clearTimeout(this.disconnectTimers.get(userId));
+        this.disconnectTimers.delete(userId);
+        this.setConnected(userId, true);
+    }
+
+    // Appele par la gateway quand le DERNIER socket (onglet) du user est parti.
+    // On attend un peu : un refresh de page ne doit pas donner la main a l'IA.
+    userDisconnected(userId: number) {
+        clearTimeout(this.disconnectTimers.get(userId));
+        this.disconnectTimers.set(userId, setTimeout(() => {
+            this.disconnectTimers.delete(userId);
+            this.setConnected(userId, false);
+        }, RECONNECT_GRACE_MS));
+    }
+
+    // Met a jour isConnected dans toutes les parties en cours du user.
+    private setConnected(userId: number, isConnected: boolean) {
+        for (const game of [...this.games.values()]) {
+            if (game.phase === 'finished')
+                continue;
+            const player = game.players.find(p => p.userId === userId);
+            if (!player || player.isConnected === isConnected)
+                continue;
+
+            const updated: GameTypes.Game = {
+                ...game,
+                players: game.players.map(p => p.userId === userId ? { ...p, isConnected } : p),
+            };
+            // plus aucun humain pour regarder : personne ne reviendra, on arrete
+            if (!updated.players.some(p => !GameTypes.isBotControlled(p))) {
+                void this.abandonGame(updated.id);
+                continue;
+            }
+            this.commit(updated);
+            // si c'etait son tour, l'IA le joue pour lui
+            if (!isConnected)
+                void this.runBots(updated.id);
+        }
+    }
+
+    // Partie terminee sans gagnant (winnerSeat null) : tous les humains sont partis.
+    private async abandonGame(gameId: number) {
+        this.games.delete(gameId);
+        this.chats.delete(gameId);
+        try {
+            await this.prisma.game.update({
+                where: { idGame: gameId },
+                data: { phase: 'finished', finishedAt: new Date() },
+            });
+        }
+        catch (error) {
+            console.error(`abandonGame ${gameId}:`, error);
         }
     }
 }

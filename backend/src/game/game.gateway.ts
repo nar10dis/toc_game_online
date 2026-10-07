@@ -1,28 +1,17 @@
 import { JwtService } from '@nestjs/jwt';
 import {
     WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayInit,
-    OnGatewayConnection, ConnectedSocket, MessageBody,
+    OnGatewayConnection, OnGatewayDisconnect, ConnectedSocket, MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { GameAction, StateMessage, isAI } from './game.types';
 import { viewFor } from './engine/view';
-
-// Le cookie arrive brut dans le handshake : "jwt=xxx; refresh_token=yyy"
-function readCookie(cookieHeader: string | undefined, name: string): string | null {
-    if (!cookieHeader)
-        return null;
-    for (const part of cookieHeader.split(';')) {
-        const [key, ...value] = part.trim().split('=');
-        if (key === name)
-            return decodeURIComponent(value.join('='));
-    }
-    return null;
-}
+import { readCookie } from '../auth/ws-auth';
 
 // path sous /ws/ : c'est la route que nginx proxifie avec l'upgrade websocket.
 @WebSocketGateway({ path: '/ws/socket.io' })
-export class GameGateway implements OnGatewayInit, OnGatewayConnection {
+export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Server;
 
     constructor(private gameService: GameService, private jwtService: JwtService) {}
@@ -50,7 +39,20 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection {
         }
         catch {
             client.disconnect();
+            return;
         }
+        this.gameService.userConnected(client.data.userId);
+    }
+
+    // Le user n'est parti que si c'etait son dernier onglet.
+    handleDisconnect(client: Socket) {
+        const userId: number | undefined = client.data.userId;
+        if (userId === undefined)
+            return; // kicke au handshake, il n'a jamais ete connecte
+        const room = this.server.sockets.adapter.rooms.get(`user-${userId}`);
+        const otherSockets = [...(room ?? [])].filter(id => id !== client.id);
+        if (otherSockets.length === 0)
+            this.gameService.userDisconnected(userId);
     }
 
     // Le client demande l'etat actuel (arrivee sur une page, reconnexion).
@@ -77,5 +79,30 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection {
         catch (error) {
             return { error: (error as Error).message };
         }
+    }
+
+    // Le message part a tous les humains de la partie, l'auteur compris.
+    @SubscribeMessage('chat')
+    handleChat(@ConnectedSocket() client: Socket, @MessageBody() body: { gameId: number; text: string }) {
+        try {
+            const { game, message } = this.gameService.sendChat(body?.gameId, client.data.userId, body?.text);
+            for (const player of game.players) {
+                if (!isAI(player))
+                    this.server.to(`user-${player.userId}`).emit('chat', message);
+            }
+            return { ok: true };
+        }
+        catch (error) {
+            return { error: (error as Error).message };
+        }
+    }
+
+    // L'historique du chat, pour un client qui arrive en cours de partie.
+    @SubscribeMessage('chat-sync')
+    handleChatSync(@ConnectedSocket() client: Socket) {
+        const game = this.gameService.findGameOfUser(client.data.userId);
+        if (!game)
+            return;
+        client.emit('chat-history', this.gameService.getChat(game.id));
     }
 }
