@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConicalIcon, HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
+import { HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
 
@@ -94,26 +94,14 @@ export default function Menu() {
 
         <Separator className="my-6" />
 
-        {/* side by side, so the whole menu fits on one screen */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Button
-            variant="outline"
-            onClick={() => router.push("/rules")}
-            className="h-auto w-full gap-2 rounded-2xl p-4 text-lg"
-          >
-            <HelpCircleIcon className="size-5" />
-            Some question about the rules ?
-          </Button>
-
-          {/* Dev tool: jumps straight to the board, remove before release */}
-          <Button
-            onClick={() => router.push("/play")}
-            className="h-auto w-full gap-2 rounded-2xl bg-fuchsia-600 p-4 text-lg text-white hover:bg-fuchsia-700"
-          >
-            <FlaskConicalIcon className="size-5" />
-            Test game
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/rules")}
+          className="h-auto w-full gap-2 rounded-2xl p-4 text-lg"
+        >
+          <HelpCircleIcon className="size-5" />
+          Some question about the rules ?
+        </Button>
       </div>
     </PageLayout>
   );

@@ -22,8 +22,9 @@ Les places vides sont prises par des IA, et la partie se joue en temps réel gr�
 5. [Le moteur de jeu (`engine/`)](#5-le-moteur-de-jeu-engine)
 6. [Temps réel : WebSockets](#6-temps-réel--websockets)
 7. [Frontend](#7-frontend)
-8. [Base de données (Prisma)](#8-base-de-données-prisma)
-9. [État du projet / reste à faire](#9-état-du-projet--reste-à-faire)
+8. [Identité visuelle et design system](#8-identité-visuelle-et-design-system)
+9. [Base de données (Prisma)](#9-base-de-données-prisma)
+10. [État du projet / reste à faire](#10-état-du-projet--reste-à-faire)
 
 ---
 
@@ -375,7 +376,123 @@ Voir `frontend/CLAUDE.MD`. En résumé : code simple et lisible, **pas de nouvel
 
 ---
 
-## 8. Base de données (Prisma)
+## 8. Identité visuelle et design system
+
+Le site a une identité à lui : un **papier beige**, une **encre bleu nuit** et des **traits usés, dessinés à la main**, comme un vieux jeu de cartes griffonné. Tout part de quelques tokens définis une seule fois, puis réutilisés par tous les composants.
+
+Les images de cette section sont dans `docs/design-system/`.
+
+### 8.1 Couleurs
+
+![Palette](docs/design-system/palette.png)
+
+Toutes les couleurs sont des variables CSS dans `frontend/src/styles/globals.css` (`:root`). Tailwind les expose en classes (`bg-primary`, `text-muted-foreground`…) : aucun composant n'écrit de couleur en dur.
+
+| Rôle | Tokens | Utilisation |
+|---|---|---|
+| Papier | `--background`, `--card`, `--muted`, `--border` | fond des pages, cartes posées dessus, bordures |
+| Encre | `--foreground`, `--muted-foreground` | texte, traits, dessins |
+| Bleus | `--primary`, `--accent`, `--secondary` | boutons, liens, focus |
+| Équipes | `--team-0` à `--team-3` | les 4 joueurs du plateau (pions, avatars, badges) |
+
+### 8.2 Typographie
+
+![Typographie](docs/design-system/typography.png)
+
+- **Fraunces** (`font-heading`) : titres, noms, gros boutons. Un serif avec du caractère, qui rappelle les cartes à jouer.
+- **Public Sans** (`font-body`) : texte courant, formulaires. Sobre et lisible.
+- Les deux sont chargées par `next/font` dans `_app.tsx`.
+- Les tailles suivent une **échelle modulaire de ratio 1.333** (`@theme` dans `globals.css`), de `text-sm` (0.75 rem) à `text-5xl` (4.21 rem).
+
+### 8.3 Le trait usé
+
+C'est la signature visuelle du site. Toutes les lignes (cadres, séparateurs, soulignés, header, footer) passent par deux utilitaires CSS maison :
+
+- **`worn-line`** : un bruit SVG (`feTurbulence`) sert de masque et efface le trait par endroits, comme de l'encre usée.
+- **`worn-underline`** : la même chose pour souligner un lien, sans abîmer le texte.
+
+Les formes rondes (cases du plateau, pions, badges) utilisent `lib/game/handDrawn.ts`, qui trace des cercles et des lignes légèrement tremblés. Le tremblement dépend d'une graine fixe : le dessin ne change jamais d'un rendu à l'autre.
+
+### 8.4 Illustrations
+
+Les démons, les cartes et le logo (`frontend/public/`) gardent le même style d'encre que le reste du site.
+
+<p>
+  <img src="frontend/public/demons/heart_demon.png" height="90" alt="Démon cœur">
+  <img src="frontend/public/demons/spade_demon.png" height="90" alt="Démon pique">
+  <img src="frontend/public/demons/diamond_demon.png" height="90" alt="Démon carreau">
+  <img src="frontend/public/demons/club_demon.png" height="90" alt="Démon trèfle">
+  &nbsp;&nbsp;
+  <img src="frontend/public/cards/card_heart_1.png" height="90" alt="As de cœur">
+  <img src="frontend/public/cards/card_spade_13.png" height="90" alt="Roi de pique">
+  <img src="frontend/public/cards/card_diamond_11.png" height="90" alt="Valet de carreau">
+</p>
+
+Les petites icônes d'interface viennent de `lucide-react` et suivent la couleur du texte (`currentColor`).
+
+### 8.5 Composants réutilisables
+
+Ces composants sont écrits par nous. Ils reçoivent leur contenu par leurs props et ne dépendent d'aucune page : on peut les poser n'importe où.
+
+#### Mise en page
+
+| Composant | Rôle |
+|---|---|
+| `PageLayout` | structure commune à toutes les pages : header, contenu centré, footer |
+| `Header` / `Footer` | bandeaux du site, séparés du contenu par un trait usé |
+| `Title` / `Subtitle` | titres de page, sur l'échelle typographique |
+| `WornFrame` | la « carte » du site : un double cadre au trait usé, les deux traits s'usant à des endroits différents |
+
+![Header](docs/design-system/header.png)
+
+<img src="docs/design-system/worn-frame.png" width="320" alt="WornFrame">
+
+`WornFrame` sert pour le login, l'inscription, chaque section des règles, le profil, la page pour rejoindre une partie, la privacy policy et les terms.
+
+Les boutons et le séparateur partent de shadcn/ui mais sont repris avec nos tokens et notre typographie ; le séparateur et la variante `link` des boutons ont le trait usé :
+
+![Boutons et séparateur](docs/design-system/buttons.png)
+
+#### Cartes
+
+| Composant | Props | Rôle |
+|---|---|---|
+| `TiltCard` | `imagePath`, `label` | une carte qui s'incline vers le pointeur et grossit au survol (ressort `motion`) |
+| `CardRule` | `name`, `imagePath`, `children` | une `TiltCard` avec son nom et son explication |
+
+<img src="docs/design-system/tilt-card.gif" width="450" alt="TiltCard au survol">
+
+![CardRule dans un WornFrame](docs/design-system/card-rules.png)
+
+#### Démons et animations
+
+| Composant | Props | Rôle |
+|---|---|---|
+| `DemonCircle` | `children`, `variant` | une ronde de démons qui tourne autour (ou au-dessus) de n'importe quel contenu |
+| `DemonDrawing` | `image` | n'importe quel dessin de démon, passé à l'encre de la palette |
+| `SparkleTrail` | `getSpots` | traînée d'étincelles derrière ce qui bouge (les démons de la ronde) |
+| `DemonCampfire` | — | les quatre démons qui dansent autour du feu (menu) |
+| `CracklingFire` | — | le feu animé, fait entièrement en code |
+| `AngerMarks` | `isVisible` | petites marques de colère au-dessus d'un personnage |
+
+<p>
+  <img src="docs/design-system/demon-circle.gif" width="380" alt="DemonCircle">
+  <img src="docs/design-system/campfire.gif" width="440" alt="DemonCampfire et CracklingFire">
+</p>
+
+#### Jeu
+
+| Composant | Props | Rôle |
+|---|---|---|
+| `SeatBadge` | `seat`, `isTaken` | le démon d'un siège dans un cercle tremblé aux couleurs de l'équipe ; grisé et en pointillés si la place est libre |
+| `Pawn` | `color`, `position`, `path`, `isSelectable`, `onClick`… | pion dessiné à la main, qui marche case par case le long de `path` |
+| `TurnBanner` | `isMyTurn`, `mySeat` | « À toi de jouer ! » écrit un instant en travers du plateau |
+| `WinScreen` | `winnerSeat`, `winnerName`, `isMe` | écran de victoire avec confettis |
+| `PasswordInput` | props d'un `input` | champ mot de passe avec bouton afficher / masquer |
+
+---
+
+## 9. Base de données (Prisma)
 
 Schéma : `backend/prisma/schema.prisma`. Le client est généré dans `backend/generated/prisma`.
 
@@ -417,7 +534,7 @@ docker compose exec backend npx prisma studio
 
 ---
 
-## 9. État du projet / reste à faire
+## 10. État du projet / reste à faire
 
 **Fonctionne :** inscription / login / refresh, profil, création / join / start de partie, salle d'attente en temps réel, remplissage par des IA, coups `move` / `enter` / `exit` / `swap` / `discard`, captures, redistribution, détection du gagnant, animations.
 

@@ -2,8 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* @custom-variant dark (&:is(.dark *)); */
-
 :root {
   /* --- Palette ---------------------------------------------------------- */
   /* text #25313e · background #E5DECF · primary #407fc1                     */
@@ -59,13 +57,6 @@
   --team-2: #5F7F4A;
   --team-3: #7B5C8F;
 }
-
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
 
 html,
 body {
@@ -154,47 +145,6 @@ a {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-.dark {
-  /* La palette retournee : l'encre devient le fond, le papier devient
-     le texte. Inactif tant que rien ne pose la classe .dark. */
-  --background: #25313E;
-  --foreground: #E5DECF;
-  --card: #2E3C4B;
-  --card-foreground: #E5DECF;
-  --popover: #2E3C4B;
-  --popover-foreground: #E5DECF;
-  --primary: #639EDE;
-  --primary-foreground: #1A232D;
-  --secondary: #3A4B5E;
-  --secondary-foreground: #E5DECF;
-  --accent: #407FC1;
-  --accent-foreground: #E5DECF;
-  --muted: #334150;
-  --muted-foreground: #A9B4C0;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: #3E4E5F;
-  --input: #3E4E5F;
-  --ring: #639EDE;
-  --chart-1: #E5DECF;
-  --chart-2: #91B8E2;
-  --chart-3: #639EDE;
-  --chart-4: #407FC1;
-  --chart-5: #3A4B5E;
-  --sidebar: #2E3C4B;
-  --sidebar-foreground: #E5DECF;
-  --sidebar-primary: #639EDE;
-  --sidebar-primary-foreground: #1A232D;
-  --sidebar-accent: #407FC1;
-  --sidebar-accent-foreground: #E5DECF;
-  --sidebar-border: #3E4E5F;
-  --sidebar-ring: #639EDE;
-  /* Memes teintes, eclaircies pour rester lisibles sur l'encre. */
-  --team-0: #D9705A;
-  --team-1: #E0A94A;
-  --team-2: #8CAD68;
-  --team-3: #A07FB5;
 }
 
 

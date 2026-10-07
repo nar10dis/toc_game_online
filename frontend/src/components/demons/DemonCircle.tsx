@@ -4,6 +4,8 @@ import { motionValue, useTime, useTransform } from "motion/react";
 
 import { DemonRing } from "@/components/demons/DemonRing";
 import { SparkleTrail } from "@/components/demons/SparkleTrail";
+import { TEAM_PICTURES } from "@/components/game/PlayerAvatars";
+import { TEAM_COLORS } from "@/lib/game/boardGeometry";
 import { pointOnCircle } from "@/lib/pointOnCircle";
 import { randomBetween } from "@/lib/randomBetween";
 
@@ -13,6 +15,9 @@ const demonImages = [
   "/demons/heart_demon.png",
   "/demons/spade_demon.png",
 ];
+
+// Each demon leaves sparkles in the colour of the team it stands for in the game
+const demonColors = demonImages.map((image) => TEAM_COLORS[TEAM_PICTURES.indexOf(image)]);
 
 const oneTurnInMs = 30000;
 // Extra space so the demons don't touch the corners of the content
@@ -68,7 +73,8 @@ export function DemonCircle({
       const demonAngle = rotation.get() + (index / angleOffsets.length) * 360 + angleOffset.get();
       const distanceFromCenter =
         radius + randomBetween(-sparkleMaxDistanceFromPath, sparkleMaxDistanceFromPath);
-      return pointOnCircle(demonAngle - sparkleDegreesBehindDemon, distanceFromCenter);
+      const point = pointOnCircle(demonAngle - sparkleDegreesBehindDemon, distanceFromCenter);
+      return { ...point, color: demonColors[index] };
     });
   }
 

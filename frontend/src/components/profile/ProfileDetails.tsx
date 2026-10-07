@@ -65,15 +65,21 @@ function ProfileBio({ bio, onEdit }: { bio: string | null; onEdit?: () => void }
   }
 
   return (
-    <blockquote className="relative max-w-md px-8 text-center font-body text-lg whitespace-pre-line">
-      <span aria-hidden className="absolute -top-3 left-0 font-heading text-5xl leading-none text-primary/40">
-        &ldquo;
-      </span>
-      {bio}
-      <span aria-hidden className="absolute right-0 -bottom-6 font-heading text-5xl leading-none text-primary/40">
-        &rdquo;
-      </span>
-    </blockquote>
+    <div className="flex flex-col items-center gap-6">
+      <blockquote className="relative max-w-md px-8 text-center font-body text-lg whitespace-pre-line wrap-anywhere">
+        <span aria-hidden className="absolute -top-3 left-0 font-heading text-5xl leading-none text-primary/40">
+          &ldquo;
+        </span>
+        {bio}
+        <span aria-hidden className="absolute right-0 -bottom-6 font-heading text-5xl leading-none text-primary/40">
+          &rdquo;
+        </span>
+      </blockquote>
+      <Button variant="ghost" size="sm" onClick={onEdit} className="gap-1.5 rounded-full text-muted-foreground">
+        <PencilIcon />
+        Edit bio
+      </Button>
+    </div>
   );
 }
 
