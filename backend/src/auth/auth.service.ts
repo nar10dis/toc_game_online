@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDTO } from './dto/register.dto';
+import { NAME_PATTERN } from '../profile/profile.service';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomUUID, timingSafeEqual } from 'crypto';
@@ -24,6 +25,9 @@ export class AuthService {
 
     async register(data: RegisterDTO)
     {
+        // Same rule as when the pseudo is changed on the profile
+        if (typeof data.name !== 'string' || !NAME_PATTERN.test(data.name))
+            throw new BadRequestException('Pseudo must be 3 to 20 letters, digits, _ or -');
         const salt = await bcrypt.genSalt(10);
         const hashPassword = await bcrypt.hash(data.password, salt);
         return this.prisma.user.create({

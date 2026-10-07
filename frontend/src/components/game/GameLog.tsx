@@ -160,7 +160,7 @@ export function GameLog({ events, playerNames }: GameLogProps) {
                   className="size-3 shrink-0 rounded-full"
                   style={{ backgroundColor: TEAM_COLORS[entry.seat] }}
                 />
-                <span className="font-bold" style={{ color: TEAM_COLORS[entry.seat] }}>
+                <span className="max-w-32 truncate font-bold" style={{ color: TEAM_COLORS[entry.seat] }}>
                   {playerNames[entry.seat]}
                 </span>
                 <MiniCard cardId={entry.cardId} />
@@ -168,7 +168,7 @@ export function GameLog({ events, playerNames }: GameLogProps) {
               </div>
 
               {entry.capturedSeats.length > 0 && (
-                <p className="mt-0.5 pl-5 text-destructive">
+                <p className="mt-0.5 pl-5 text-destructive wrap-anywhere">
                   ✖ capture {entry.capturedSeats.map((seat) => playerNames[seat]).join(", ")}
                 </p>
               )}

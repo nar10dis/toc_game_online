@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { saveAvatar, deleteAvatar } from './avatar-storage';
 
-const NAME_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
+export const NAME_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 export const BIO_MAX_LENGTH = 280;
 
 @Injectable()

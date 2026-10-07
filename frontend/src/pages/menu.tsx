@@ -45,7 +45,7 @@ export default function Menu() {
     <PageLayout>
       <div className="w-full max-w-6xl">
         <div className="text-center">
-          <p className="font-heading text-3xl font-bold md:text-4xl">
+          <p className="font-heading text-3xl font-bold wrap-anywhere md:text-4xl">
             {welcomeText}
           </p>
           <p className="mt-1 font-body text-base text-muted-foreground md:text-lg">
