@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
 import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './engine/state';
-import { chooseAIAction } from './engine/AI';
+import { chooseAIAction } from './engine/AI/AI';
 
 // Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
 // Un bot "reflechit" entre 1 et 3 secondes avant de jouer.
@@ -151,6 +151,29 @@ export class GameService {
         void this.runBots(gameId);
 
         return { gameId };
+    }
+
+    // L'hote choisit la difficulte du bot d'un siege vide, avant de lancer la partie.
+    setAILevel(gameId: number, requesterUserId: number, seat: number, level: string) {
+        const game = this.games.get(gameId);
+        if (!game)
+            throw new NotFoundException('Game not found');
+
+        const isHost = game.players[0]?.userId === requesterUserId;
+        if (!isHost)
+            throw new ForbiddenException('Only the host can choose the bots');
+        if (game.phase !== 'waiting')
+            throw new ConflictException('Game already started');
+        if (seat < 0 || seat > 3)
+            throw new BadRequestException('Invalid seat');
+        if (game.players.some(p => p.seat === seat))
+            throw new ConflictException('This seat is taken by a player');
+        if (!GameTypes.AI_LEVELS.includes(level as GameTypes.AILevel))
+            throw new BadRequestException('Invalid AI level');
+
+        const aiLevels = game.aiLevels.map((oldLevel, i) => i === seat ? level as GameTypes.AILevel : oldLevel);
+
+        this.commit({ ...game, aiLevels });
     }
 
     playAction(gameId: number, userId: number, action: GameTypes.GameAction) {

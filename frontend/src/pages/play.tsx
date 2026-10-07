@@ -16,9 +16,9 @@ import { useChat } from "@/hooks/useChat";
 import { useGame } from "@/hooks/useGame";
 import { useTurnChoice } from "@/hooks/useTurnChoice";
 import { Header } from "@/components/layout/Header";
-import { CardRule } from "@/components/rules/CardRule";
-import { cardRuleOf } from "@/lib/rules/cardRules";
 import { paperStyle } from "@/lib/paperStyle";
+import type { CardId } from "@/lib/game/gameTypes";
+import { deadCardReason } from "@/lib/game/deadCard";
 
 import { Board } from "@/components/game/Board";
 
@@ -49,9 +49,19 @@ export default function Play() {
     for (const player of game.players) {
       playerNames[player.seat] = player.pseudo;
     }
-    const selectedRule = turnChoice.selectedCardId
-      ? cardRuleOf(turnChoice.selectedCardValue)
-      : undefined;
+    const deadCardReasons: Partial<Record<CardId, string>> = {};
+    for (const card of game.myHand) {
+      const reason = deadCardReason(card, game);
+      if (reason) deadCardReasons[card.id] = reason;
+    }
+    //a card is unique in the deck: the last move made with it says who played it.
+    //Unknown after a reload, those cards just have no outline.
+    const playedCardColors: Partial<Record<CardId, string>> = {};
+    for (const event of events) {
+      if ("cardId" in event.action) {
+        playedCardColors[event.action.cardId] = TEAM_COLORS[event.seat];
+      }
+    }
 
     content = (
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
@@ -63,13 +73,6 @@ export default function Play() {
 
           {/* pushed to the bottom left */}
           <div className="mt-auto">
-            {settings.showTutorial && selectedRule && (
-              <div className="mt-4">
-                <CardRule name={selectedRule.name} imagePath={selectedRule.imagePath}>
-                  {selectedRule.text}
-                </CardRule>
-              </div>
-            )}
             <SettingsMenu settings={settings} onChange={setSettings} />
           </div>
         </aside>
@@ -106,6 +109,9 @@ export default function Play() {
               <CardTable
                 hand={game.myHand}
                 discardPile={game.discardPile}
+                playedCardColors={playedCardColors}
+                showHints={settings.showTutorial}
+                deadCardReasons={deadCardReasons}
                 selectedCardId={turnChoice.selectedCardId}
                 canPickCard={isMyTurn && !turnChoice.isSplitInProgress}
                 onCardClick={turnChoice.handleCardClick}

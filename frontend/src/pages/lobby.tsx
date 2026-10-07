@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
-import { startGame } from "@/api/game";
+import { setAILevel, startGame } from "@/api/game";
+import { AI_LEVELS, type AILevel } from "@/lib/game/gameTypes";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,17 @@ export default function Lobby() {
     setErrorMessage(null);
     try {
       await startGame(game.id);
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    }
+  }
+
+  // the new level comes back to everybody through the websocket
+  async function handleAILevel(seat: number, level: AILevel) {
+    if (!game) return;
+    setErrorMessage(null);
+    try {
+      await setAILevel(game.id, seat, level);
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -85,6 +97,24 @@ export default function Lobby() {
                 </span>
                 {!isTaken && (
                   <span className="text-sm text-muted-foreground">A bot plays if nobody comes</span>
+                )}
+                {/* the host picks the bot level, the others just see it */}
+                {!isTaken && isHost && (
+                  <div className="flex gap-1">
+                    {AI_LEVELS.map((level) => (
+                      <Button
+                        key={level}
+                        size="xs"
+                        variant={game.aiLevels[seat] === level ? "default" : "outline"}
+                        onClick={() => handleAILevel(seat, level)}
+                      >
+                        {level}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {!isTaken && !isHost && (
+                  <span className="text-sm text-muted-foreground">Bot level: {game.aiLevels[seat]}</span>
                 )}
               </li>
             );

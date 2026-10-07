@@ -24,6 +24,7 @@ export function initGame(id: number, inviteCode: string): Game
 				currentSeat: 0,
 				winner: null,
 				pendingSplit: null,
+				aiLevels: ['medium', 'medium', 'medium', 'medium'],
 		}
 	return newGame;
 }

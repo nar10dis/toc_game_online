@@ -1,4 +1,4 @@
-import { CircleUserRoundIcon, PlayIcon } from "lucide-react";
+import { CircleUserRoundIcon } from "lucide-react";
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -40,16 +40,6 @@ export function Header() {
       </Link>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        {isLogged && (
-          <Button
-            size="lg"
-            onClick={() => router.push("/menu")}
-            className="h-10 gap-2 rounded-full px-4 font-heading text-lg font-bold"
-          >
-            <PlayIcon className="size-4 fill-current" />
-            Play
-          </Button>
-        )}
         {isLogged && <FriendsLink />}
         <Button
           variant="ghost"
