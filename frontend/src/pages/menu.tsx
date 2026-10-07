@@ -15,7 +15,7 @@ import { useUsername } from "@/api/user";
 
 // h-auto and whitespace-normal undo the single-line sizing the Button ships with.
 const bigButtonClasses =
-  "h-auto min-h-56 w-full flex-col items-start justify-center gap-4 rounded-3xl p-10 text-left whitespace-normal";
+  "h-auto min-h-32 w-full flex-col items-start justify-center gap-2 rounded-3xl p-6 text-left whitespace-normal";
 
 export default function Menu() {
   const router = useRouter();
@@ -45,25 +45,27 @@ export default function Menu() {
     <PageLayout>
       <div className="w-full max-w-6xl">
         <div className="text-center">
-          <p className="font-heading text-4xl font-bold md:text-5xl">
+          <p className="font-heading text-3xl font-bold md:text-4xl">
             {welcomeText}
           </p>
-          <p className="mt-4 font-body text-lg text-muted-foreground md:text-xl">Ready to play ?</p>
+          <p className="mt-1 font-body text-base text-muted-foreground md:text-lg">
+            Ready to play ?
+          </p>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-2">
           <DemonCampfire />
         </div>
 
-        <div className="mt-16 text-center md:mt-4">
+        <div className="mt-8 text-center md:mt-2">
           <Title>Game menu</Title>
           <Subtitle>Start a table of your own, or sit at someone else&apos;s.</Subtitle>
         </div>
 
-        <div className="mt-12 grid gap-12 md:grid-cols-2">
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
           <Button onClick={handleCreate} disabled={isCreating} className={bigButtonClasses}>
-            <span className="flex items-center gap-2 font-heading text-3xl font-bold md:text-4xl">
-              <PlusIcon className="size-8" />
+            <span className="flex items-center gap-2 font-heading text-2xl font-bold md:text-3xl">
+              <PlusIcon className="size-7" />
               {isCreating ? "Creating..." : "Create game"}
             </span>
             <span className="font-body text-base font-normal text-primary-foreground/80">
@@ -76,8 +78,8 @@ export default function Menu() {
             onClick={() => router.push("/join-game")}
             className={bigButtonClasses}
           >
-            <span className="flex items-center gap-2 font-heading text-3xl font-bold md:text-4xl">
-              <UsersIcon className="size-8" />
+            <span className="flex items-center gap-2 font-heading text-2xl font-bold md:text-3xl">
+              <UsersIcon className="size-7" />
               Join game
             </span>
             <span className="font-body text-base font-normal text-secondary-foreground/75">
@@ -90,25 +92,28 @@ export default function Menu() {
           <p className="mt-6 text-center text-sm text-destructive">{createError}</p>
         )}
 
-        <Separator className="my-16" />
+        <Separator className="my-6" />
 
-        <Button
-          variant="outline"
-          onClick={() => router.push("/rules")}
-          className="h-auto w-full gap-2 rounded-2xl p-6 text-lg"
-        >
-          <HelpCircleIcon className="size-5" />
-          Some question about the rules ?
-        </Button>
+        {/* side by side, so the whole menu fits on one screen */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/rules")}
+            className="h-auto w-full gap-2 rounded-2xl p-4 text-lg"
+          >
+            <HelpCircleIcon className="size-5" />
+            Some question about the rules ?
+          </Button>
 
-        {/* Dev tool: jumps straight to the board, remove before release */}
-        <Button
-          onClick={() => router.push("/play")}
-          className="mt-6 h-auto w-full gap-2 rounded-2xl bg-fuchsia-600 p-6 text-lg text-white hover:bg-fuchsia-700"
-        >
-          <FlaskConicalIcon className="size-5" />
-          Test game
-        </Button>
+          {/* Dev tool: jumps straight to the board, remove before release */}
+          <Button
+            onClick={() => router.push("/play")}
+            className="h-auto w-full gap-2 rounded-2xl bg-fuchsia-600 p-4 text-lg text-white hover:bg-fuchsia-700"
+          >
+            <FlaskConicalIcon className="size-5" />
+            Test game
+          </Button>
+        </div>
       </div>
     </PageLayout>
   );

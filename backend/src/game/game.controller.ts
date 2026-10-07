@@ -17,7 +17,7 @@ export class GameController {
     @Post('join/:inviteCode')
     joinGame(@Param('inviteCode') inviteCode: string ,@CurrentUser() user: JwtPayload) {
         return this.gameService.joinGame(inviteCode, user.sub, user.username);
-    } 
+    }
 
     @UseGuards(AuthGuard)
     @Post(':gameId/start')
@@ -26,4 +26,11 @@ export class GameController {
         return this.gameService.startGame(gameId, user.sub)
     }
 
+    @UseGuards(AuthGuard)
+    @Post('ai-level/:gameId/:seat/:level')
+    setAILevel(@Param('gameId', ParseIntPipe) gameId: number, @Param('seat', ParseIntPipe) seat: number,
+            @Param('level') level: string, @Req() req: Request) {
+        const user = (req as any).user;
+        return this.gameService.setAILevel(gameId, user.sub, seat, level);
+    }
 }

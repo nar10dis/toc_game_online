@@ -127,7 +127,8 @@ export function useTurnChoice(
     send(move.action);
   }
 
-  // before picking a pawn: my pawns that can do something with the card.
+  // before picking a pawn: my pawns that can do something with the card
+  // (any pawn of a swap for the jack, any opponent pawn for the 5).
   // For the jack, once the first one is picked: the pawns it can swap with.
   const selectablePawnIds: number[] = [];
   for (const move of cardMoves) {
@@ -141,7 +142,7 @@ export function useTurnChoice(
     }
     for (const pawnId of pawnIds) {
       const pawn = game?.pawns.find((onePawn) => onePawn.id === pawnId);
-      if (pawn && (isFive || pawn.playerSeat === game?.mySeat)) selectablePawnIds.push(pawnId);
+      if (pawn && (isFive || isJack || pawn.playerSeat === game?.mySeat)) selectablePawnIds.push(pawnId);
     }
   }
   // the picked pawn stays clickable, to let it go
