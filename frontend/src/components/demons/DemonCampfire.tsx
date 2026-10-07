@@ -15,15 +15,15 @@ const demonImages = [
 
 const oneTurnInMs = 20000;
 // Half the width of the orbit, in px
-const orbitRadiusX = 210;
+const orbitRadiusX = 180;
 // Height of the ellipse compared to its width: small means a light tilt
-const orbitFlatness = 0.3;
+const orbitFlatness = 0.28;
 // The whole orbit leans a little
 const orbitLean = (-6 * Math.PI) / 180;
 const orbitRadiusY = orbitRadiusX * orbitFlatness;
 
 // Opacity of a demon once it is fully hidden by the fire
-const opacityBehindFire = 0.15;
+const opacityBehindFire = 0;
 // Horizontal distance from the fire centre where a demon behind starts and ends fading, in px
 const fadeStartDistance = 130;
 const fadeFullDistance = 50;
@@ -44,9 +44,9 @@ const demonHeight = 96;
 const gapUnderLogs = 10;
 // The logs don't reach the very bottom of the fire drawing
 const logsBottomInsideFire = 5;
-// The fire sits high enough that demons passing in front go under the logs instead of across them
-// The orbit sits a little higher than the fire, which stays where it was
-const orbitRaiseInPx = 10;
+// Without a raise, demons passing in front would go just under the logs.
+// The orbit sits higher than that, so the circle hugs the fire: demons in front cross the bottom of the logs
+const orbitRaiseInPx = 40;
 const fireBottomAboveOrbitCentre =
   demonHeight + danceHopInPx + gapUnderLogs - orbitRadiusY - logsBottomInsideFire - orbitRaiseInPx;
 
@@ -146,9 +146,9 @@ export function DemonCampfire() {
 
   return (
     // Hidden on mobile for now. No transform nor z-index on the wrappers, so demons and fire share the same stacking order
-    <div className="relative mx-auto hidden h-96 w-full max-w-xl md:block" aria-hidden="true">
+    <div className="relative mx-auto hidden h-72 w-full max-w-xl md:block" aria-hidden="true">
       {/* Centre of the orbit, on the ground under the fire */}
-      <div className="pointer-events-none absolute bottom-[130px] left-1/2">
+      <div className="pointer-events-none absolute bottom-[70px] left-1/2">
         <SparkleTrail getSpots={getSparkleSpots} />
 
         <div
