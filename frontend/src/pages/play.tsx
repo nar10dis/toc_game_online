@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CardTable } from "@/components/game/CardTable";
+import { ChatBox } from "@/components/game/ChatBox";
 import { GameLog } from "@/components/game/GameLog";
 import { SettingsMenu, type GameSettings } from "@/components/game/SettingsMenu";
 import { DestinationMarkers } from "@/components/game/DestinationMarkers";
@@ -11,6 +12,7 @@ import { TurnBanner } from "@/components/game/TurnBanner";
 import { TurnControls } from "@/components/game/TurnControls";
 import { WinScreen } from "@/components/game/WinScreen";
 import { toBoardPawns } from "@/lib/game/boardPawns";
+import { useChat } from "@/hooks/useChat";
 import { useGame } from "@/hooks/useGame";
 import { useTurnChoice } from "@/hooks/useTurnChoice";
 import { Header } from "@/components/layout/Header";
@@ -26,6 +28,11 @@ const BOARD_SIDE = "min(100cqw, 100cqh)";
 export default function Play() {
   const { game, lastEvent, events, hasNoGame, sendAction } = useGame();
   const turnChoice = useTurnChoice(game, sendAction);
+  let gameId: number | null = null;
+  if (game) {
+    gameId = game.id;
+  }
+  const chat = useChat(gameId);
   const [settings, setSettings] = useState<GameSettings>({
     showCellIndexes: false,
     showTutorial: false,
@@ -58,9 +65,11 @@ export default function Play() {
 
     content = (
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
-        <aside className="flex shrink-0 flex-col md:w-72">
+        {/* scrolls on short screens, so the settings at the bottom stay reachable */}
+        <aside className="flex min-h-0 shrink-0 flex-col overflow-y-auto md:w-72">
           <TurnControls game={game} turnChoice={turnChoice} />
           <GameLog events={events} playerNames={playerNames} />
+          <ChatBox messages={chat.messages} onSend={chat.sendMessage} />
 
           {/* pushed to the bottom left */}
           <div className="mt-auto">

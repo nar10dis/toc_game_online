@@ -80,4 +80,29 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             return { error: (error as Error).message };
         }
     }
+
+    // Le message part a tous les humains de la partie, l'auteur compris.
+    @SubscribeMessage('chat')
+    handleChat(@ConnectedSocket() client: Socket, @MessageBody() body: { gameId: number; text: string }) {
+        try {
+            const { game, message } = this.gameService.sendChat(body?.gameId, client.data.userId, body?.text);
+            for (const player of game.players) {
+                if (!isAI(player))
+                    this.server.to(`user-${player.userId}`).emit('chat', message);
+            }
+            return { ok: true };
+        }
+        catch (error) {
+            return { error: (error as Error).message };
+        }
+    }
+
+    // L'historique du chat, pour un client qui arrive en cours de partie.
+    @SubscribeMessage('chat-sync')
+    handleChatSync(@ConnectedSocket() client: Socket) {
+        const game = this.gameService.findGameOfUser(client.data.userId);
+        if (!game)
+            return;
+        client.emit('chat-history', this.gameService.getChat(game.id));
+    }
 }
