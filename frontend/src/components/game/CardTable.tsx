@@ -170,10 +170,12 @@ type CardHintProps = {
   /** Transform of the hovered card, to sit right above it. */
   cardTransform: CardTransform;
   tableSize: TableSize;
+  /** Why the card cannot be played, shown in red under the rule, or `null`. */
+  deadReason: string | null;
 };
 
 /** What the hovered card of the hand can do, shown above it. */
-function CardHint({ card, cardTransform, tableSize }: CardHintProps) {
+function CardHint({ card, cardTransform, tableSize, deadReason }: CardHintProps) {
   const rule = cardRuleOf(card.value);
   if (!rule) return null;
 
@@ -208,6 +210,9 @@ function CardHint({ card, cardTransform, tableSize }: CardHintProps) {
     >
       <p className="font-heading text-base font-bold">{getCardFrenchLabel(card)}</p>
       <div className="font-body text-sm text-muted-foreground">{rule.text}</div>
+      {deadReason && (
+        <p className="mt-2 border-t pt-2 font-body text-sm text-destructive">{deadReason}</p>
+      )}
     </motion.div>
   );
 }
@@ -236,6 +241,10 @@ type CardTableProps = {
   /** Colour of whoever played each card of the pile, when known. */
   playedCardColors?: Partial<Record<CardId, string>>;
   selectedCardId?: CardId | null;
+  /** False: hovering a card of the hand shows no hint. */
+  showHints?: boolean;
+  /** Why each card of the hand that cannot be played this turn can't. */
+  deadCardReasons?: Partial<Record<CardId, string>>;
   /** False when it is not my turn: the hand cannot be clicked. */
   canPickCard?: boolean;
   onCardClick?: (cardId: CardId) => void;
@@ -247,6 +256,8 @@ export function CardTable({
   discardPile,
   playedCardColors = {},
   selectedCardId = null,
+  showHints = true,
+  deadCardReasons = {},
   canPickCard = false,
   onCardClick = () => {},
 }: CardTableProps) {
@@ -301,7 +312,9 @@ export function CardTable({
       isSelected: card.id === selectedCardId,
       outlineColor: null,
       onClick,
-      onHoverChange: (isHovered: boolean) => handleHandCardHover(card.id, isHovered),
+      onHoverChange: showHints
+        ? (isHovered: boolean) => handleHandCardHover(card.id, isHovered)
+        : null,
     };
   });
 
@@ -321,7 +334,7 @@ export function CardTable({
   //a played card leaves the hand: its hint goes with it.
   const hintCardPosition = hand.findIndex((card) => card.id === hintCardId);
   let hint = null;
-  if (hintCardPosition !== -1) {
+  if (showHints && hintCardPosition !== -1) {
     const hintCardTransform = getHandCardTransform(hintCardPosition, hand.length, tableSize);
     if (hand[hintCardPosition].id === selectedCardId) {
       hintCardTransform.y -= HOVER_LIFT_IN_PIXELS * 2 * getCardScale(tableSize);
@@ -332,6 +345,7 @@ export function CardTable({
         card={hand[hintCardPosition]}
         cardTransform={hintCardTransform}
         tableSize={tableSize}
+        deadReason={deadCardReasons[hand[hintCardPosition].id] ?? null}
       />
     );
   }

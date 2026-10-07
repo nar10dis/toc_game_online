@@ -41,7 +41,7 @@ export const CARD_RULES: CardRuleData[] = [
     imagePath: "/cards/card_clubs_11.png",
     values: [11],
     text:
-      "Swap one of your pawns with any other pawn on the board. It never moves forward: if no " +
+      "Swap any two pawns on the board, yours or not. It never moves forward: if no " +
       "swap is possible, it is discarded. Pawns in a starting zone or at home cannot be swapped.",
   },
   {

@@ -57,27 +57,33 @@ export function getLegalActions(hand : Card[], pawns: Pawn[], seat: Seat, pendin
 				legalMoves.push({type: 'discard', cardId: card.id});
 			continue;
 		}
-		//le valet sert seulement a echanger : il n'avance jamais
-		const isJack = card.value === 11;
+		//le valet echange deux pions du plateau, a nous ou pas. Il n'avance jamais. On le defausse s'il est injouable.
+		if (card.value === 11)
+		{
+			const swaps : GameAction[] = [];
 
+			//j commence apres i : chaque paire une seule fois, pas de doublon
+			for (let i = 0; i < pawns.length; i++)
+			{
+				for (let j = i + 1; j < pawns.length; j++)
+				{
+					if (Rules.canSwap(pawns, card, pawns[i], pawns[j]))
+						swaps.push({type: 'swap', cardId: card.id, pawnIdA: pawns[i].id, pawnIdB: pawns[j].id});
+				}
+			}
+			legalMoves.push(...swaps);
+			if (swaps.length === 0)
+				legalMoves.push({type: 'discard', cardId: card.id});
+			continue;
+		}
 		for (const pawn of myPawns)
 		{
-			if (!isJack && (Rules.canMove(pawns, realValueOf(card), pawn) || Rules.canMoveInHome(pawns, realValueOf(card), pawn)))
+			if (Rules.canMove(pawns, realValueOf(card), pawn) || Rules.canMoveInHome(pawns, realValueOf(card), pawn))
 				legalMoves.push({type: 'move', cardId: card.id, pawnId: pawn.id});
-			if (!isJack && Rules.canGoHome(pawns, realValueOf(card), pawn))
+			if (Rules.canGoHome(pawns, realValueOf(card), pawn))
 				legalMoves.push({type: 'enter', cardId: card.id, pawnId:pawn.id});
 			if (Rules.canExit(pawns, card, pawn))
 				legalMoves.push({type: 'exit', cardId: card.id, pawnId: pawn.id});
-			for (const other of pawns)
-			{
-				if (Rules.canSwap(pawns, card, pawn, other))
-				{
-					//pour eviter les doublons !
-					if (other.playerSeat === seat && other.id < pawn.id)
-						continue;
-					legalMoves.push({type: 'swap', cardId: card.id, pawnIdA: pawn.id, pawnIdB: other.id});
-				}
-			}
 		}
 		if (Rules.canDiscard(pawns, card, seat))
 			legalMoves.push({type: 'discard', cardId :card.id});
