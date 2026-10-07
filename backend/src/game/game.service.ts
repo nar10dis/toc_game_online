@@ -22,6 +22,8 @@ export class GameService {
     private disconnectTimers = new Map<number, NodeJS.Timeout>();
     // une seule boucle de bots par partie, sinon deux bots jouent le meme tour
     private botLoops = new Set<number>();
+    // userId -> la derniere partie qu'il a creee ou rejointe : c'est la qu'il revient en actualisant
+    private lastGameOfUser = new Map<number, number>();
     // donne par la gateway -> envoie letat du game a tous les clients de la partie.
     private broadcast?: (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void;
 
@@ -35,15 +37,13 @@ export class GameService {
         this.broadcast?.(game, event);
     }
 
-    // La partie la plus recente du joueur (pour la resynchro d'un client).
+    // La derniere partie creee ou rejointe par le joueur (pour la resynchro d'un client).
     findGameOfUser(userId: number): GameTypes.Game | null {
-        let found: GameTypes.Game | null = null;
-
-        for (const game of this.games.values()) {
-            if (game.players.some(p => p.userId === userId))
-                found = game;
-        }
-        return found;
+        const gameId = this.lastGameOfUser.get(userId);
+        if (gameId === undefined)
+            return null;
+        // undefined si la partie a ete abandonnee entre temps
+        return this.games.get(gameId) ?? null;
     }
 
     private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -86,6 +86,7 @@ export class GameService {
         game = addPlayer(game, userId, pseudo);
 
         this.commit(game);
+        this.lastGameOfUser.set(userId, game.id);
 
         return { gameId: game.id, inviteCode };
     }
@@ -101,8 +102,10 @@ export class GameService {
 
         const alreadyIn = game.players.some(p => p.userId === userId);
         // on ne renvoie jamais la Game entiere : l'etat passe par le websocket (viewFor)
-        if (alreadyIn)
+        if (alreadyIn) {
+            this.lastGameOfUser.set(userId, game.id);
             return { gameId: game.id, inviteCode };
+        }
 
         const seat = game.players.length as GameTypes.Seat;
 
@@ -119,6 +122,7 @@ export class GameService {
 
         //commit le nouvel etat dans la map.
         this.commit(game);
+        this.lastGameOfUser.set(userId, game.id);
 
         return { gameId: game.id, inviteCode };
     }
