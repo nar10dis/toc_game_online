@@ -111,6 +111,12 @@ export class GameService {
 
         const seat = game.players.length as GameTypes.Seat;
 
+        // Le siege est pris en memoire AVANT le premier await : Node ne coupe jamais ce bout de code,
+        // donc deux joins en meme temps ne peuvent pas voir la meme place libre (sinon 6 joueurs).
+        game = addPlayer(game, userId, pseudo);
+        this.commit(game);
+        this.lastGameOfUser.set(userId, game.id);
+
         await this.prisma.gamePlayer.create({
             data: {
                 gameId: game.id,
@@ -118,13 +124,6 @@ export class GameService {
                 seat
             },
         });
-
-        //MODIFICATION DE GAME
-        game = addPlayer(game, userId, pseudo);
-
-        //commit le nouvel etat dans la map.
-        this.commit(game);
-        this.lastGameOfUser.set(userId, game.id);
 
         return { gameId: game.id, inviteCode };
     }

@@ -1,0 +1,164 @@
+BEUG.TXT - tests "utilisateur vicieux" du 08/10/2026
+====================================================
+
+Comment j'ai testé :
+- ~40 comptes créés via l'API (emails en @test.fr / @t.fr), tout passe par nginx (https://localhost:8443)
+- scripts HTTP : entrées pourries, doubles clics, requêtes en parallèle, tokens volés/périmés
+- clients socket.io : vraie partie 2 humains + 2 bots avec déco/reco au hasard, actions bidon, spam du chat
+- Chromium sans tête : clique partout au hasard, F5, bouton retour, hors-ligne, 2 onglets, largeur mobile
+Tout ce qui est marqué [REPRO] a été reproduit, pas juste supposé en lisant le code.
+
+Légende : !!! = bloquant / risque de note éliminatoire   !! = un correcteur le verra   ! = finition
+
+
+=====================================================================
+!!! BLOQUANT / SÉCURITÉ
+=====================================================================
+
+1. [CORRIGÉ] "Create game" / "Join game" depuis le menu : le lobby reste bloqué sur "Connecting..." [REPRO]
+   -> autoConnect: false enlevé de chatSocket.ts, vérifié dans le navigateur (lobby sans F5, chat sans doublon).
+   - Il faut faire F5 pour voir la salle d'attente. C'est le parcours principal du jeu.
+   - Cause : frontend/src/sockets/chatSocket.ts crée la socket avec { autoConnect: false }.
+     Dans socket.io-client, cette option est retenue par le Manager, PARTAGÉ par toutes les
+     sockets du même serveur. Le chat global est créé en premier (sur /menu), donc la socket du
+     jeu (gameSocket.ts, io({ path })) créée ensuite ne se connecte jamais.
+     (node_modules/socket.io-client/build/cjs/socket.js:127 : `if (this.io._autoConnect)`)
+   - Si on ouvre /lobby directement (F5), la socket du jeu est créée en premier et tout marche.
+   - Fix simple : dans gameSocket.ts, appeler socket.connect() juste après io(...)
+     (ou enlever autoConnect: false du chat).
+
+2. [CORRIGÉ] Plus de 4 joueurs dans une partie, sièges en double [REPRO]
+   -> le joueur est ajouté en mémoire avant l'await Prisma : 6 joins simultanés = 3 acceptés, 3 refusés, sièges {0,1,2,3}.
+   - 5 personnes cliquent "Join" en même temps sur une table où il ne reste que 3 places : 5 x 201.
+   - En base, la partie 6 a 6 joueurs, sièges {0,1,1,1,2,2}.
+   - Cause : game.service.ts joinGame() vérifie "places libres" puis fait un `await prisma...`
+     AVANT d'ajouter le joueur en mémoire, et calcule le siège depuis l'ancien état.
+   - Fix : ajouter le joueur en mémoire (commit) AVANT l'await, ou un verrou par partie.
+
+3. !!! Les cookies de session de tout le monde sont lisibles sans mot de passe [REPRO]
+   - Les logs du backend (pino-http) contiennent les en-têtes complets, cookie jwt ET refresh_token.
+   - Ils partent dans Elasticsearch, ouvert sur http://localhost:9200 sans authentification
+     (xpack.security.enabled=false). `curl 'localhost:9200/_search?q=refresh_token'` renvoie des
+     refresh tokens valides 7 jours, donc on peut se connecter sur le compte de n'importe qui.
+   - Kibana (5601) aussi est ouvert sans login.
+   - Fix : `redact: ['req.headers.cookie', 'res.headers["set-cookie"]']` dans la config pino
+     (backend/src/config/logger.config.ts), et ne pas publier 9200/5601 (ou activer la sécurité).
+
+4. !!! Secrets dans git
+   - .env (racine) est commité, avec POSTGRES_PASSWORD (historique depuis le commit 38339ed).
+   - Il n'y a PAS de .gitignore à la racine : 118 fichiers de frontend/.next sont commités aussi.
+   - En correction, "des identifiants dans le repo" est souvent éliminatoire.
+   - Fix : .gitignore (.env, .next, node_modules, uploads), `git rm --cached`, et changer les mots
+     de passe (ils restent dans l'historique).
+   - Au passage : .env contient POSTGRES_PASSWORD et POSTGRES_DB en double.
+
+5. !!! Erreurs 500 sur des cas banals [REPRO]
+   - Inscription avec un email déjà pris : 500 (au lieu de 409)
+   - Inscription avec un pseudo déjà pris : 500
+   - Double clic sur "Sign up" : le 2e clic donne 500
+     -> auth.service.ts register() ne gère pas l'erreur Prisma P2002 (profile.service.ts le fait déjà
+        pour le pseudo, on peut copier).
+   - GET /api/profile/99999999999999 : 500 (nombre trop grand pour un Int Postgres)
+   - Compte supprimé mais jwt encore valide (15 min) -> POST /api/game : 500 (clé étrangère)
+   - Socket 'action' avec un payload null : crash "Cannot read properties of null (reading 'gameId')"
+     (game.gateway.ts handleAction : body.gameId sans `?.`)
+
+
+=====================================================================
+!! UN CORRECTEUR LE VERRA
+=====================================================================
+
+6. !! Partie à 1 pion par joueur : backend/.env contient QUICK_GAME=1
+   - Une partie finit en ~40 coups. Pratique pour tester, à enlever avant la correction.
+
+7. !! On peut être dans plusieurs parties à la fois / perdre sa partie en cours [REPRO]
+   - "Create game" pendant une partie en cours : nouvelle partie créée, et /play montre maintenant
+     la nouvelle. L'ancienne continue avec l'IA à notre place, sans moyen d'y revenir.
+   - Double clic sur "Create game" : 2 parties créées.
+   - Le menu ne propose pas de "reprendre ma partie".
+   - Fix : refuser create/join si findGameOfUser() renvoie une partie pas finie (409), ou
+     rediriger vers elle.
+
+8. !! Pas de bouton "Quitter" dans le lobby
+   - Un joueur qui a rejoint garde son siège pour toujours, même s'il part au menu.
+   - Si l'hôte supprime son compte, le lobby reste là et personne ne peut le lancer
+     ("Only the host can lock the team").
+
+9. !! Avatar entre 1 et 2 Mo refusé par nginx [REPRO]
+   - Le front et le back disent "max 2 MB", mais nginx a la limite par défaut de 1 Mo :
+     413 avec une page HTML nginx (le front affiche juste "Something went wrong.").
+   - Fix : `client_max_body_size 2m;` dans nginx/nginx.conf.
+
+10. !! Le front tourne en `next dev` dans Docker
+    - Console pleine de "[HMR] Invalid message ..." sur chaque page.
+    - Pour la correction : build de prod (next build && next start).
+
+11. !! Erreurs rouges dans la console sur des cas normaux
+    - "Failed to load resource: 404" quand on ajoute un ami qui n'existe pas, mauvais code
+      d'invitation, /players/999999 ; 3 x 401 juste après "Log out".
+    - Certains correcteurs comptent toute erreur console. À voir si vous voulez répondre 200 + { error }
+      pour les erreurs "attendues", ou au moins ne plus appeler l'API après le logout.
+
+12. !! Pseudo et email : la casse n'est pas prise en compte [REPRO]
+    - On peut créer "BOB" alors que "bob" existe (et renommer son profil en "BYG..." quand "byg..." existe) :
+      usurpation facile dans le chat.
+    - Même email en majuscules = 2e compte.
+    - Fix : stocker l'email en minuscules ; comparer les pseudos sans la casse (ou citext).
+
+13. !! Pas de limite de tentatives
+    - 30 mauvais mots de passe d'affilée : toujours 401, aucun blocage (brute force).
+    - Chat global : 200 messages envoyés en 41 ms, tous acceptés (flood). Pareil pour le chat de partie.
+
+14. !! Rotation du refresh token et plusieurs onglets [REPRO]
+    - 3 refresh en parallèle avec le même token : 201, 201, 401. Deux ont réussi avec le même token
+      (vérif puis update pas atomiques), et le cookie qui reste n'est plus valide au refresh suivant.
+    - En vrai : 2 onglets ouverts au moment où le jwt expire -> déconnexion "au hasard".
+      (refreshAuth() ne mutualise que dans UN onglet.)
+
+15. !! Ports encore ouverts
+    - backend 3001 répond toujours en direct : docker-compose.yml est modifié mais les conteneurs n'ont
+      pas été recréés (`docker compose up -d --force-recreate backend frontend nginx`).
+    - 9200 (Elasticsearch) et 5601 (Kibana) publiés, voir point 3.
+
+
+=====================================================================
+! FINITIONS
+=====================================================================
+
+16. ! /login et /register restent accessibles une fois connecté (pas de redirection vers /menu).
+17. ! Après l'inscription on atterrit sur /login au lieu d'être connecté directement.
+18. ! Code d'invitation avec des espaces autour (copier-coller) : "Invalid invite code" (pas de trim).
+    (En minuscules ça marche.)
+19. ! Hors-ligne 9 s en pleine partie : rien ne l'indique à l'écran (pas de "Reconnexion...").
+20. ! Le jwt reste valide 15 min après "Log out" (normal avec des jwt, mais à savoir expliquer).
+21. ! La socket des amis envoie 2 fois la connexion au namespace en dev (vu dans le trafic :
+    "40/friends,40/friends,"), même cause que le chat en double : connectFriendsSocket() teste
+    `!socket.connected` au lieu de `!socket.active`.
+22. ! Bio : "null" -> message d'erreur "Bio must be at most 280 characters" (faux message).
+    200 emojis refusés car la longueur compte en UTF-16 (le front fait pareil, donc c'est cohérent).
+23. ! Mot de passe de 8 espaces accepté à l'inscription.
+24. ! Fichier qui commence par l'en-tête PNG puis du HTML accepté comme avatar. Il est servi en
+    image/png avec nosniff, donc pas exploitable, mais on peut ajouter un vrai décodage d'image.
+25. ! Fichiers parasites dans le repo : backend/src/game/sedNQSCqD, frontend/CLAUDE.MD.
+26. ! GET /api (sans slash) : redirection 301 de nginx vers /api/.
+27. ! L'ID d'invite n'est unique qu'en mémoire : après un redémarrage, un code déjà en base
+    peut être retiré au sort -> erreur 500 à la création (très rare).
+
+
+=====================================================================
+CE QUI TIENT BIEN (rien à faire)
+=====================================================================
+- Pages privées sans être connecté -> /login, partout.
+- Injection SQL / NoSQL dans le login, jwt forgé "alg none", vieux refresh token rejoué : refusés.
+- XSS : la bio et le chat stockent le HTML, mais React l'échappe (aucun dangerouslySetInnerHTML).
+- Avatar : SVG, faux PNG en texte et path traversal refusés, nosniff présent.
+- Amis : soi-même, inconnu, doublon, demandes croisées, double accept : tous gérés proprement.
+- Partie : start par un non-hôte, double start, join après le start, niveau d'IA bidon,
+  coups illégaux et coups hors tour : tous refusés.
+- Déco/reco aléatoires pendant 75 s : la partie ne s'est jamais bloquée, l'IA reprend la main
+  après 5 s et le joueur la récupère à son retour ; F5 en pleine partie ramène bien sur /play.
+- Tous les humains partis : la partie est terminée proprement.
+- Aucun crash JavaScript (pageerror) côté front pendant ~300 clics au hasard.
+
+Nettoyage : les comptes de test (ids 5 à 49, emails @test.fr / @t.fr) sont restés en base.
+Le chat global contient ~200 messages "spam N" de test (en mémoire : un restart du backend le vide).

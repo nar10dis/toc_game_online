@@ -30,16 +30,20 @@ export function ProfileDetails({
         {/* The pencil hangs on the right so the name stays centered */}
         <div className="relative">
           <h1 className="font-heading text-4xl font-bold break-all md:text-5xl">{me.user.name}</h1>
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            aria-label="Edit profile"
-            title="Edit profile"
-            onClick={onEdit}
-            className="absolute top-1/2 left-full ml-2 -translate-y-1/2 rounded-full text-muted-foreground"
-          >
-            <PencilIcon />
-          </Button>
+          {/* The centering translate sits on a wrapper: on the button, the press effect
+              (active:translate-y-px) would replace it and move the button away from the cursor */}
+          <div className="absolute top-1/2 left-full ml-2 -translate-y-1/2">
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              aria-label="Edit profile"
+              title="Edit profile"
+              onClick={onEdit}
+              className="rounded-full text-muted-foreground"
+            >
+              <PencilIcon />
+            </Button>
+          </div>
         </div>
         <span className="font-body text-sm text-muted-foreground">Member since {memberSince}</span>
       </div>

@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDTO } from './dto/register.dto';
 import { NAME_PATTERN } from '../profile/profile.service';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
@@ -46,22 +47,33 @@ export class AuthService {
         const password = checkPassword(data.password);
         const salt = await bcrypt.genSalt(10);
         const hashPassword = await bcrypt.hash(password, salt);
-        return this.prisma.user.create({
-            data: {
-                // Champ par champ : un champ en trop dans le body ne doit pas finir en base
-                email: data.email,
-                name: data.name,
-                password: hashPassword,
-                profile: {
-                    create: {}
-                }
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-            },
-        });
+        try {
+            return await this.prisma.user.create({
+                data: {
+                    // Champ par champ : un champ en trop dans le body ne doit pas finir en base
+                    email: data.email,
+                    name: data.name,
+                    password: hashPassword,
+                    profile: {
+                        create: {}
+                    }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            });
+        }
+        catch (error) {
+            // P2002 = email ou pseudo deja en base : 409 et pas 500
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                if (JSON.stringify(error.meta ?? {}).includes('email'))
+                    throw new ConflictException('This email is already used');
+                throw new ConflictException('This pseudo is already taken');
+            }
+            throw error;
+        }
     }
     async login(data: {email: string; password: string;})
     {

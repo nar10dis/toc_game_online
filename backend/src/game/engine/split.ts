@@ -72,7 +72,8 @@ export function getSplitSteps(pawns: Pawn[], seat: Seat, cardId: CardId, left: n
 
 	for (const pawn of pawnsOf(pawns, seat))
 	{
-		for (let steps = 1; steps <= left; steps++)
+		// du plus grand au plus petit : a score egal, l'IA prend le plus gros morceau
+		for (let steps = left; steps >= 1; steps--)
 		{
 			for (const enter of [false, true])
 			{

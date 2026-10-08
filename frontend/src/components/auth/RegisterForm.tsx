@@ -2,6 +2,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/router"
 import { cn } from "@/lib/utils"
+import { readError } from "@/api/auth"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -45,12 +46,13 @@ export function RegisterForm({
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Only these 3 fields: the backend puts the whole body into the database
+        // Only these 3 fields: the backend ignores anything else
         body: JSON.stringify({ name, email, password }),
       })
 
+      // The backend says what is wrong: email already used, pseudo taken, invalid email...
       if (!res.ok) {
-        setError("Could not create the account. The email or name may already be taken.")
+        setError(await readError(res))
         return
       }
 
