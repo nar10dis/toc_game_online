@@ -68,7 +68,8 @@ Légende : !!! = bloquant / risque de note éliminatoire   !! = un correcteur le
 !! UN CORRECTEUR LE VERRA
 =====================================================================
 
-6. !! Partie à 1 pion par joueur : backend/.env contient QUICK_GAME=1
+6. [PRIS EN CHARGE] Partie à 1 pion par joueur : backend/.env contient QUICK_GAME=1
+   -> Nardis s'en occupe.
    - Une partie finit en ~40 coups. Pratique pour tester, à enlever avant la correction.
 
 7. [CORRIGÉ] On peut être dans plusieurs parties à la fois / perdre sa partie en cours [REPRO]
@@ -84,6 +85,7 @@ Légende : !!! = bloquant / risque de note éliminatoire   !! = un correcteur le
 
 8. [CORRIGÉ] Pas de bouton "Quitter" dans le lobby
    -> bouton "Quit game" dans le lobby (et dans le menu) : le siège est libéré, le suivant devient hôte.
+      Reste : la suppression de compte de l'hôte ne passe pas par leaveGame().
    - Un joueur qui a rejoint garde son siège pour toujours, même s'il part au menu.
    - Si l'hôte supprime son compte, le lobby reste là et personne ne peut le lancer
      ("Only the host can lock the team").
@@ -164,5 +166,6 @@ CE QUI TIENT BIEN (rien à faire)
 - Tous les humains partis : la partie est terminée proprement.
 - Aucun crash JavaScript (pageerror) côté front pendant ~300 clics au hasard.
 
-Nettoyage : les comptes de test (ids 5 à 49, emails @test.fr / @t.fr) sont restés en base.
+Nettoyage : les comptes de test (ids 5 à 49, emails @test.fr / @t.fr) sont restés en base,
+plus 2 comptes lva... / lvb...@test.fr créés pour tester le point 7.
 Le chat global contient ~200 messages "spam N" de test (en mémoire : un restart du backend le vide).
