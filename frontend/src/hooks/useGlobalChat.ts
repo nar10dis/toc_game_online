@@ -39,13 +39,18 @@ export function useGlobalChat(): GlobalChatState {
 
     socket.on("message", handleMessage);
     socket.on("history", handleHistory);
-    socket.connect();
+    // connect() twice in a row (StrictMode runs effects twice) joins /chat twice,
+    // and every message then arrives twice: the socket is opened only once
+    if (!socket.active) {
+      socket.connect();
+    } else if (socket.connected) {
+      // Already connected from a previous visit: the server only sends the history on connect
+      socket.emit("history", handleHistory);
+    }
 
-    // Disconnect when the page goes away, so the next visit gets the history again
     return () => {
       socket.off("message", handleMessage);
       socket.off("history", handleHistory);
-      socket.disconnect();
     };
   }, []);
 

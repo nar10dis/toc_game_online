@@ -4,13 +4,15 @@ import { refreshAuth } from "@/api/auth";
 
 let chatSocket: Socket | null = null;
 
-/** The global chat socket. Only opened while a page shows the chat. */
+/** The global chat socket. Opened the first time a page shows the chat, then kept open. */
 export function getChatSocket(): Socket {
   if (chatSocket) {
     return chatSocket;
   }
 
-  chatSocket = io("/chat", { path: "/ws/socket.io", autoConnect: false });
+  // No autoConnect: false here: socket.io keeps it on the Manager shared by every socket,
+  // and the game socket created after this one would then never connect
+  chatSocket = io("/chat", { path: "/ws/socket.io" });
 
   // The server kicks us when the jwt is expired: get a fresh one and come back
   chatSocket.on("disconnect", async (reason) => {

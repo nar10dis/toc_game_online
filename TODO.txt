@@ -1,9 +1,0 @@
-
-FINIR IA
-
-BACK
-	pb de reco si co sur ancienne partie
-
-	test sa mere -> bot automatise ??
-FRONT
-	pb dun nom trop grand

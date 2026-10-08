@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDTO } from './dto/register.dto';
 import { NAME_PATTERN } from '../profile/profile.service';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
@@ -19,6 +20,19 @@ function isSameHash(hashA: string, hashB: string): boolean {
     return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB);
 }
 
+// Volontairement simple : quelque chose@domaine.extension, sans espace
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function checkPassword(password: unknown): string
+{
+    if (typeof password !== 'string' || password.length < 8)
+        throw new BadRequestException('Password must be at least 8 characters long');
+    // bcrypt ignore tout ce qui depasse 72 octets
+    if (Buffer.byteLength(password) > 72)
+        throw new BadRequestException('Password is too long');
+    return password;
+}
+
 @Injectable()
 export class AuthService {
     constructor(private prisma: PrismaService, private jwtService: JwtService) {}
@@ -28,25 +42,44 @@ export class AuthService {
         // Same rule as when the pseudo is changed on the profile
         if (typeof data.name !== 'string' || !NAME_PATTERN.test(data.name))
             throw new BadRequestException('Pseudo must be 3 to 20 letters, digits, _ or -');
+        if (typeof data.email !== 'string' || data.email.length > 254 || !EMAIL_PATTERN.test(data.email))
+            throw new BadRequestException('Invalid email');
+        const password = checkPassword(data.password);
         const salt = await bcrypt.genSalt(10);
-        const hashPassword = await bcrypt.hash(data.password, salt);
-        return this.prisma.user.create({
-            data: {
-                ...data,
-                password: hashPassword,
-                profile: {
-                    create: {}
-                }
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-            },
-        });
+        const hashPassword = await bcrypt.hash(password, salt);
+        try {
+            return await this.prisma.user.create({
+                data: {
+                    // Champ par champ : un champ en trop dans le body ne doit pas finir en base
+                    email: data.email,
+                    name: data.name,
+                    password: hashPassword,
+                    profile: {
+                        create: {}
+                    }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+            });
+        }
+        catch (error) {
+            // P2002 = email ou pseudo deja en base : 409 et pas 500
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                if (JSON.stringify(error.meta ?? {}).includes('email'))
+                    throw new ConflictException('This email is already used');
+                throw new ConflictException('This pseudo is already taken');
+            }
+            throw error;
+        }
     }
     async login(data: {email: string; password: string;})
     {
+        // Meme 401 qu'un mauvais mot de passe, le front affiche deja ce message
+        if (typeof data?.email !== 'string' || typeof data?.password !== 'string')
+            throw new UnauthorizedException();
         const user = await this.prisma.user.findUnique({
             where: {
                 email: data.email,
@@ -144,11 +177,7 @@ export class AuthService {
     {
         if (typeof currentPassword !== 'string' || typeof newPassword !== 'string')
             throw new BadRequestException('Current and new password are required');
-        if (newPassword.length < 8)
-            throw new BadRequestException('New password must be at least 8 characters long');
-        // bcrypt ignore tout ce qui depasse 72 octets
-        if (Buffer.byteLength(newPassword) > 72)
-            throw new BadRequestException('New password is too long');
+        checkPassword(newPassword);
 
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user)
