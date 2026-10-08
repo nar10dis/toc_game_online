@@ -20,7 +20,7 @@ export async function joinGame(inviteCode: string): Promise<GameCreated> {
 }
 
 export async function startGame(gameId: number): Promise<void> {
-  const response = await fetchWithRefresh(`/api/game/start/${gameId}`, { method: "POST" });
+  const response = await fetchWithRefresh(`/api/game/${gameId}/start`, { method: "POST" });
   if (!response.ok) {
     throw new Error(await readError(response));
   }

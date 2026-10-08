@@ -25,6 +25,7 @@ Les places vides sont prises par des IA, et la partie se joue en temps réel gr�
 8. [Identité visuelle et design system](#8-identité-visuelle-et-design-system)
 9. [Base de données (Prisma)](#9-base-de-données-prisma)
 10. [État du projet / reste à faire](#10-état-du-projet--reste-à-faire)
+11. [Gestion des erreurs et logs](#11-gestion-des-erreurs-et-logs)
 
 ---
 
@@ -547,3 +548,44 @@ docker compose exec backend npx prisma studio
 - [ ] **Règles à trancher** : Valet sur un pion protégé ou sur ses propres pions, défausse autorisée si une autre carte est jouable, parties en équipes 2v2.
 - [ ] **Tests unitaires de l'engine** (Jest) : `homeCellIndex`, `enter`, passage de 71 à 0, recul du 4, captures.
 - [ ] Privacy policy et terms of use.
+
+---
+
+## 11. Gestion des erreurs et logs
+
+Les logs du backend et de nginx sont centralisés dans la stack ELK : **Kibana** sur http://localhost:5601, index `app-logs-*`. Le guide complet (niveaux, champs, filtres, tests) est dans [`docs/logs-guide.md`](docs/logs-guide.md).
+
+### Le trajet d'un log
+
+```
+NestJS (nestjs-pino) ──tcp:5000──► Logstash ──► Elasticsearch ──► Kibana
+nginx                ──syslog:5140─►
+```
+
+Chaque log est un objet JSON. Le champ `service` (`backend` / `nginx`) est ajouté par Logstash, `context` est le nom passé à `new Logger('...')`, et `level` vaut 20 (debug), 30 (info), 40 (warn) ou 50 (error).
+
+### Trois couches de gestion d'erreur
+
+| Couche | Fichier | Ce qu'elle attrape |
+|---|---|---|
+| **pino-http** | `config/logger.config.ts` | Chaque requête HTTP : méthode, url, code, durée. 5xx → error, 4xx → warn, sinon info. |
+| **`AllExceptionFilter`** | `config/all-exceptions.filter.ts` | Toute exception levée pendant une requête HTTP. `HttpException` (< 500) → warn `request refused`, le reste → error `unhandled error`. Elle rend ensuite la main à Nest, qui renvoie la réponse au client. |
+| **Logs manuels** | `game.gateway.ts`, `friends.gateway.ts`, `game.service.ts` | Tout ce qui n'est **pas** une requête HTTP : événements WebSocket, bots joués en arrière-plan, timers de déconnexion. |
+
+**La règle est la même partout :** une erreur **attendue** (mauvais code d'invitation, coup illégal, JWT expiré) est une `HttpException`, loggée en **warn**. Une erreur **inattendue** (exception JS, base de données en panne, bot bloqué) est un bug, loggée en **error**.
+
+### Conventions
+
+- Les erreurs « métier » se lancent avec les exceptions Nest (`NotFoundException`, `ConflictException`, …), jamais avec `new Error`. C'est ce qui donne le bon code HTTP et le bon niveau de log.
+- Côté WebSocket, l'erreur est renvoyée dans l'ack du client (`{ error: message }`) **et** loggée par `logWsError`.
+- Une promesse lancée sans `await` doit avoir son `.catch(err => this.logger.error(...))`, sinon son erreur est perdue.
+- Pas de `console.log` / `console.error` : ils n'arrivent pas dans Kibana.
+- Ne jamais logger de mot de passe, token ou cookie : `redact` les masque déjà dans les requêtes HTTP (`logger.config.ts`).
+
+### Retrouver une erreur
+
+```
+service : "backend" and level >= 50     # les bugs
+context : "GameService" and gameId : 3   # l'histoire de la partie 3
+req.id : 21                              # les lignes d'une même requête HTTP
+```

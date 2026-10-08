@@ -6,10 +6,10 @@ export const LoggerConfig = LoggerModule.forRoot({
     level: 'debug',
     //400 -> faut du client // 500 = notre faute
     customLogLevel: (req, res, err)=> {
-      if (err || res.statisCode >= 500) return 'error';
+      if (err || res.statusCode >= 500) return 'error';
       if (res.statusCode >= 400) return 'warn';
       return 'info'
-    }
+    },
     // NEVER SEND JWT
     redact: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
     transport: {

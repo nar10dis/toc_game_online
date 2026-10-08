@@ -8,13 +8,13 @@ import { GameModule } from './game/game.module';
 import { LoggerConfig } from './config/logger.config';
 import { FriendsModule } from './friends/friends.module';
 import { APP_FILTER } from '@nestjs/core';
-import { AllExceptionsFilter } from './config/all-exceptions.filter';
+import { AllExceptionFilter } from './config/all-exceptions.filter';
 
 @Module({
   imports: [PrismaModule, AuthModule, ProfileModule, GameModule, FriendsModule, LoggerConfig],
   controllers: [AppController],
   providers: [AppService,
-    {provide: APP_FILTER, useClass: AllExceptionFilter}.
+    {provide: APP_FILTER, useClass: AllExceptionFilter},
   ],
 })
 export class AppModule {};

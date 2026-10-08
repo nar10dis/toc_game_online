@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
@@ -26,6 +26,8 @@ export class GameService {
     private nextChatMessageId = 1;
     // donne par la gateway -> envoie letat du game a tous les clients de la partie.
     private broadcast?: (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void;
+    //pour commit un log-> this.logger.<niveau>({champs}, 'msg);
+    private readonly logger = new Logger('GameService');
 
     setBroadcaster(fn : (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void) {
         this.broadcast = fn;
@@ -147,8 +149,7 @@ export class GameService {
         });
 
         // le siege 0 est toujours un humain (l'hote), mais au cas ou.
-        void this.runBots(gameId);
-
+        this.startBots(gameId);
         return { gameId };
     }
 
@@ -195,7 +196,12 @@ export class GameService {
 
         this.commit(out.game, out.event);
         // pas de await : on repond tout de suite, les bots jouent en fond
-        void this.runBots(gameId);
+        this.startBots(gameId);
+    }
+
+    // runBots tourne en fond, hors requete HTTP : sans ce catch son erreur serait perdue.
+    private startBots(gameId: number) {
+        this.runBots(gameId).catch(err => this.logger.error({ err, gameId }, 'runBots crashed'));
     }
 
     private async runBots(gameId: number) {
@@ -214,8 +220,11 @@ export class GameService {
                 const seat = game.currentSeat;
                 const action = chooseAIAction(game, seat);
                 const out = action && playTurn(game, seat, action);
-                if (!out)
+                // l'IA n'a rien trouve ou le moteur refuse son coup : la partie reste bloquee
+                if (!out) {
+                    this.logger.error({ gameId, seat, actionType: action?.type ?? null }, 'bot could not play');
                     break;
+                }
                 this.commit(out.game, out.event);
             }
         }
@@ -297,6 +306,8 @@ export class GameService {
             const player = game.players.find(p => p.userId === userId);
             if (!player || player.isConnected === isConnected)
                 continue;
+            this.logger.log({ gameId: game.id, userId, seat: player.seat },
+                isConnected ? 'player reconnected' : 'player disconnected, AI takes over');
 
             const updated: GameTypes.Game = {
                 ...game,
@@ -310,12 +321,13 @@ export class GameService {
             this.commit(updated);
             // si c'etait son tour, l'IA le joue pour lui
             if (!isConnected)
-                void this.runBots(updated.id);
+                this.startBots(updated.id);
         }
     }
 
     // Partie terminee sans gagnant (winnerSeat null) : tous les humains sont partis.
     private async abandonGame(gameId: number) {
+        this.logger.log({ gameId }, 'game abandoned: no human left');
         this.games.delete(gameId);
         this.chats.delete(gameId);
         try {
@@ -325,7 +337,7 @@ export class GameService {
             });
         }
         catch (error) {
-            console.error(`abandonGame ${gameId}:`, error);
+            this.logger.error({err: error, gameId}, 'abandonGame: DB update failed');
         }
     }
 }
