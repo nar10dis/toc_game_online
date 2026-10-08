@@ -28,6 +28,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      # the build cache stays in the container: on sgoinfre (network disk) next dev hangs
+      - /app/.next
     networks:
       - docker-network
 
