@@ -1,4 +1,3 @@
-PUT _ilm/policy/app-logs-policy
 {
   "policy": {
     "phases": {
@@ -20,17 +19,3 @@ PUT _ilm/policy/app-logs-policy
     }
   }
 }
-
-PUT _index_template/app-logs-template
-{
-  "index_patterns": ["app-logs-*"],
-  "priority": 200,
-  "template": {
-    "settings": {
-      "index.lifecycle.name": "app-logs-policy",
-      "number_of_shards": 1,
-      "number_of_replicas": 0
-    }
-  }
-}
-

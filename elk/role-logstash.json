@@ -1,0 +1,9 @@
+{
+  "cluster": ["monitor", "manage_index_templates", "manage_ilm"],
+  "indices": [
+    {
+      "names": ["app-logs-*"],
+      "privileges": ["create_index", "create", "index", "write", "manage", "manage_ilm"]
+    }
+  ]
+}

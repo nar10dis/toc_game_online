@@ -68,12 +68,14 @@ services:
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
       - es-data:/usr/share/elasticsearch/data
     ports:
-      - "9200:9200"
+      - "127.0.0.1:9200:9200"
     networks:
       - docker-network
 
@@ -82,8 +84,10 @@ services:
     container_name: kibana
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
     ports:
-      - "5601:5601"
+      - "127.0.0.1:5601:5601"
     depends_on:
       - elasticsearch
     networks:
@@ -92,10 +96,29 @@ services:
   logstash:
     build: ./logstash
     container_name: logstash
+    environment:
+      - LOGSTASH_PASSWORD=${LOGSTASH_PASSWORD}
     depends_on:
     - elasticsearch
     networks:
     - docker-network
+
+  elk:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.5
+    container_name: elk-setup
+    user: root
+    entrypoint: ["/bin/bash", "/setup/setup.sh"]
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+      - LOGSTASH_PASSWORD=${LOGSTASH_PASSWORD}
+    volumes:
+      - ./elk:/setup:ro
+    depends_on:
+      - elasticsearch
+    restart: "no"
+    networks:
+      - docker-network
 
 
 networks:
