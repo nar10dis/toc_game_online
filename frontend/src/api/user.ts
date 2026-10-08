@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { fetchWithRefresh, readError } from "@/api/auth";
+import { fetchWithRefresh, getSession, readError } from "@/api/auth";
 
 export type Me = {
   userId: number;
@@ -56,12 +56,16 @@ export async function removeAvatar(): Promise<Me> {
   return response.json();
 }
 
-export async function getUsername(): Promise<string | null> {
-  const me = await getMe();
-  if (!me) {
-    return null;
+// The backend asks the password again before deleting everything
+export async function deleteAccount(password: string): Promise<void> {
+  const response = await fetchWithRefresh("/api/profile", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
   }
-  return me.user.name;
 }
 
 // The jwt cookie is httpOnly, so asking the backend is the only way to know if we are logged in
@@ -69,8 +73,8 @@ export function useIsLogged(): boolean {
   const [isLogged, setIsLogged] = useState(false);
 
   useEffect(() => {
-    getMe().then((me) => {
-      if (me) {
+    getSession().then((user) => {
+      if (user) {
         setIsLogged(true);
       }
     });
@@ -83,7 +87,11 @@ export function useUsername(): string | null {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    getUsername().then(setUsername);
+    getSession().then((user) => {
+      if (user) {
+        setUsername(user.name);
+      }
+    });
   }, []);
 
   return username;

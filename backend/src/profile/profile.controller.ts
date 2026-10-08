@@ -51,8 +51,12 @@ export class ProfileController {
     return this.profileService.removeAvatar(user.sub);
   }
 
-  // @Delete(':userId')
-  // remove(@Param('userId') userId: string) {
-  //   return this.profileService.remove(+userId);
-  // }
+  @UseGuards(AuthGuard)
+  @Delete()
+  async remove(@CurrentUser() user: { sub: number }, @Body() body: { password?: string }, @Res({ passthrough: true }) res: Response) {
+    await this.profileService.remove(user.sub, body?.password);
+    res.clearCookie('jwt');
+    res.clearCookie('refresh_token');
+    return { message: 'Account deleted' };
+  }
 }

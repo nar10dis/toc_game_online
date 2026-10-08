@@ -56,7 +56,7 @@ model GamePlayer {
   gameId              Int       
   game                Game      @relation(fields: [gameId], references: [idGame])
   userId              Int      
-  user                User      @relation(fields: [userId], references: [id])
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   seat                Int
   joindedAt           DateTime  @default(now())
 }

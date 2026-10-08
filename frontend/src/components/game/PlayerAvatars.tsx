@@ -43,6 +43,8 @@ const INVERT_INK_FILTER = "invert-ink";
 const NAME_FONT_SIZE = 50;
 /** Gap between the top of the picture and the baseline of the name. */
 const NAME_GAP = 12;
+/** Rough width of one letter, as a share of the font size, to guess a name's width. */
+const LETTER_WIDTH_RATIO = 0.6;
 
 const DEFAULT_PLAYER_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4"];
 
@@ -76,6 +78,22 @@ export function PlayerAvatars({
   const allTeams = Array.from({ length: TEAMS_NUMBER }, (_, team) => team);
   const shownTeams = allTeams.filter((team) => team !== playerTeam);
   const boardRotation = useBoardRotation();
+
+  // A side avatar sits close to the board edge: its name must fit twice that distance.
+  // Longer names are squeezed rather than cut off the board.
+  const closestEdgeDistance = Math.min(
+    ...allTeams.map((team) => {
+      const { x } = computeAvatarCoords(team, boardSize);
+      return Math.min(x, boardSize - x);
+    })
+  );
+  const maxNameWidth = 2 * closestEdgeDistance * 0.9;
+
+  function nameWidth(name: string) {
+    const guessedWidth = name.length * NAME_FONT_SIZE * LETTER_WIDTH_RATIO;
+    if (guessedWidth <= maxNameWidth) return undefined;
+    return maxNameWidth;
+  }
 
   return (
     <g>
@@ -161,6 +179,8 @@ export function PlayerAvatars({
                   textAnchor="middle"
                   fill={color}
                   fontSize={NAME_FONT_SIZE}
+                  textLength={nameWidth(playerNames[team])}
+                  lengthAdjust="spacingAndGlyphs"
                 >
                   {playerNames[team]}
                 </text>

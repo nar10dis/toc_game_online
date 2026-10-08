@@ -6,6 +6,8 @@ import { cardRuleOf } from "@/lib/rules/cardRules";
 import { getCardFrenchLabel, getCardImagePath } from "@/lib/game/cardDeck";
 import {
   CARD_HEIGHT_IN_PIXELS,
+  CARD_IMAGE_HEIGHT,
+  CARD_IMAGE_WIDTH,
   CARD_WIDTH_IN_PIXELS,
   CLEAR_TABLE_FALL,
   DEAL_IN_START_TRANSFORM,
@@ -143,13 +145,18 @@ function SingleCard({
       >
         <Image
           src={getCardImagePath(card)}
-          width={CARD_WIDTH_IN_PIXELS}
-          height={CARD_HEIGHT_IN_PIXELS}
+          //the real size of the file, then CSS fits it to the card width:
+          //next/image warns when only one of the two sizes is changed by CSS
+          width={CARD_IMAGE_WIDTH}
+          height={CARD_IMAGE_HEIGHT}
+          sizes={`${CARD_WIDTH_IN_PIXELS}px`}
           alt={getCardFrenchLabel(card)}
           draggable={false}
           //on the picture, not its box: the picture keeps its own shape and
           //is shorter than the box.
           style={{
+            width: "100%",
+            height: "auto",
             borderRadius: CARD_CORNER_RADIUS_IN_PIXELS,
             boxShadow: outlineColor
               ? `0 0 0 ${PLAYER_OUTLINE_IN_PIXELS}px ${outlineColor}`

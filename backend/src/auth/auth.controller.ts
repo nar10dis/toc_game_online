@@ -45,6 +45,18 @@ export class AuthController {
         return { message: 'Your token is fresh' };
     }
 
+    // Toujours 200 : { user } ou { user: null }, pour ne pas remplir la console de 401 attendus
+    @Get('session')
+    async session(@Req() req: Request, @Res({ passthrough: true }) res: Response)
+    {
+        const { user, tokens } = await this.authService.getSession(req.cookies['jwt'], req.cookies['refresh_token']);
+        if (tokens) {
+            res.cookie('jwt', tokens.access_token, ACCESS_COOKIE_OPTIONS);
+            res.cookie('refresh_token', tokens.refresh_token, REFRESH_COOKIE_OPTIONS);
+        }
+        return { user };
+    }
+
     @UseGuards(AuthGuard)
     @Patch('password')
     async changePassword(@Req() req: Request, @Body() dto: ChangePasswordDTO, @Res({ passthrough: true }) res: Response)

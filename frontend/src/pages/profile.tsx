@@ -6,16 +6,18 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Subtitle } from "@/components/layout/Title";
 import { ProfileAvatar } from "@/components/profile/ProfileAvatar";
 import { ProfileCard } from "@/components/profile/ProfileCard";
+import { ProfileDeleteForm } from "@/components/profile/ProfileDeleteForm";
 import { ProfileDetails } from "@/components/profile/ProfileDetails";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 import { ProfilePasswordForm } from "@/components/profile/ProfilePasswordForm";
+import { logout } from "@/api/auth";
 import { getMe } from "@/api/user";
 import type { Me } from "@/api/user";
 
 export default function Profile() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
-  const [mode, setMode] = useState<"view" | "edit" | "password">("view");
+  const [mode, setMode] = useState<"view" | "edit" | "password" | "delete">("view");
   const [notice, setNotice] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
 
@@ -47,19 +49,37 @@ export default function Profile() {
     setMode("view");
   }
 
-  function openMode(newMode: "edit" | "password") {
+  async function handleLogout() {
+    try {
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      setNotice((error as Error).message);
+    }
+  }
+
+  function openMode(newMode: "edit" | "password" | "delete") {
     setNotice(null);
     setMode(newMode);
   }
 
   let content = (
-    <ProfileDetails me={me} onEdit={() => openMode("edit")} onChangePassword={() => openMode("password")} />
+    <ProfileDetails
+      me={me}
+      onEdit={() => openMode("edit")}
+      onChangePassword={() => openMode("password")}
+      onLogout={handleLogout}
+      onDeleteAccount={() => openMode("delete")}
+    />
   );
   if (mode === "edit") {
     content = <ProfileEditForm me={me} onSaved={handleSaved} onCancel={() => setMode("view")} />;
   }
   if (mode === "password") {
     content = <ProfilePasswordForm onSaved={handlePasswordChanged} onCancel={() => setMode("view")} />;
+  }
+  if (mode === "delete") {
+    content = <ProfileDeleteForm onDeleted={() => router.push("/login")} onCancel={() => setMode("view")} />;
   }
 
   const avatar = (

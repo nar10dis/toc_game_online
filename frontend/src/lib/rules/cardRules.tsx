@@ -40,18 +40,13 @@ export const CARD_RULES: CardRuleData[] = [
     name: "Jack",
     imagePath: "/cards/card_clubs_11.png",
     values: [11],
-    text:
-      "Swap any two pawns on the board, yours or not. It never moves forward: if no " +
-      "swap is possible, it is discarded. Pawns in a starting zone or at home cannot be swapped.",
+    text: "Swap any two pawns of your choice on the board.",
   },
   {
     name: "7",
     imagePath: "/cards/card_heart_7.png",
     values: [7],
-    text:
-      "Split 7 steps between one or more of your pawns. It can bring a pawn home. Keep playing " +
-      "steps as long as you can: the ones nobody can play are lost. Every pawn you pass over goes " +
-      "back to its starting zone, your own ones too.",
+    text: "Split 7 steps between one or more of your pawns. You kill every pawn you pass over.",
   },
   {
     name: "5",
@@ -59,8 +54,7 @@ export const CARD_RULES: CardRuleData[] = [
     values: [5],
     text: (
       <>
-        Move <strong>an opponent&apos;s pawn</strong> forward 5, never one of yours. It cannot move
-        a pawn at home, nor bring one home. If no opponent pawn can move, it is discarded.
+        Move <strong>the opponent&apos;s pawn</strong> of your choice forward 5 on the board.
       </>
     ),
   },
