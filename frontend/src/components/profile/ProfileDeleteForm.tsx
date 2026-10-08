@@ -30,7 +30,7 @@ export function ProfileDeleteForm({ onDeleted, onCancel }: { onDeleted?: () => v
     <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-6">
       <h2 className="text-center font-heading text-2xl font-bold">Delete account</h2>
       <p className="text-center font-body text-sm text-muted-foreground">
-        Your profile, friends and game history will be deleted. This can't be undone.
+        Your profile, friends and game history will be deleted. This can&apos;t be undone.
       </p>
 
       <div className="flex flex-col gap-2">

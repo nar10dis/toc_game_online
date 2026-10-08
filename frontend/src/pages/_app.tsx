@@ -2,6 +2,8 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { Fraunces, Public_Sans } from "next/font/google";
 
+import { RequireLogin } from "@/components/auth/RequireLogin";
+
 const fraunces = Fraunces({
   subsets: ["latin"],
   weight: ["400", "700"],
@@ -25,7 +27,9 @@ export default function App({ Component, pageProps }: AppProps) {
           --font-public-sans: ${publicSans.style.fontFamily};
         }
       `}</style>
-      <Component {...pageProps} />
+      <RequireLogin>
+        <Component {...pageProps} />
+      </RequireLogin>
     </>
   );
 }
