@@ -10,10 +10,14 @@ export function ProfileDetails({
   me,
   onEdit,
   onChangePassword,
+  onLogout,
+  onDeleteAccount,
 }: {
   me: Me;
   onEdit?: () => void;
   onChangePassword?: () => void;
+  onLogout?: () => void;
+  onDeleteAccount?: () => void;
 }) {
   const memberSince = new Date(me.user.createdAt).toLocaleDateString("en-US", {
     month: "long",
@@ -49,7 +53,12 @@ export function ProfileDetails({
 
       <Separator className="max-w-md" />
 
-      <ProfileAccount email={me.user.email} onChangePassword={onChangePassword} />
+      <ProfileAccount
+        email={me.user.email}
+        onChangePassword={onChangePassword}
+        onLogout={onLogout}
+        onDeleteAccount={onDeleteAccount}
+      />
     </>
   );
 }

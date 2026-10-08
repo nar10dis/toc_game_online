@@ -48,3 +48,10 @@ export async function changePassword(currentPassword: string, newPassword: strin
     throw new Error(await readError(response));
   }
 }
+
+export async function logout(): Promise<void> {
+  const response = await fetchWithRefresh("/api/auth/logout", { method: "POST" });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+}

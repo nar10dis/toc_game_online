@@ -56,6 +56,18 @@ export async function removeAvatar(): Promise<Me> {
   return response.json();
 }
 
+// The backend asks the password again before deleting everything
+export async function deleteAccount(password: string): Promise<void> {
+  const response = await fetchWithRefresh("/api/profile", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+}
+
 export async function getUsername(): Promise<string | null> {
   const me = await getMe();
   if (!me) {

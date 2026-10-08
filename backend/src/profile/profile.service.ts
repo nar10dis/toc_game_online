@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
@@ -90,12 +91,19 @@ export class ProfileService {
     return this.findOne(userId);
   }
 
-  // async remove(userId: number) {
-  //   await this.prisma.profile.delete({
-  //     where: {
-  //       userId,
-  //   }
-  //   })
-  //   return `This action removes a #${userId} profile`;
-  // }
+  // On redemande le mot de passe : un cookie vole ne doit pas suffire a supprimer le compte
+  async remove(userId: number, password: string | undefined) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true, profile: { select: { avatarUrl: true } } },
+    });
+    if (!user)
+      throw new UnauthorizedException();
+    if (typeof password !== 'string' || !await bcrypt.compare(password, user.password))
+      throw new BadRequestException('Password is incorrect');
+
+    // Profile, Friendship et GamePlayer partent en cascade
+    await this.prisma.user.delete({ where: { id: userId } });
+    await deleteAvatar(user.profile?.avatarUrl ?? null);
+  }
 }
