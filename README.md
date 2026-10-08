@@ -1,591 +1,702 @@
-# Transcendence — jeu de Tock en ligne
+*This project has been created as part of the 42 curriculum by nadeluge, elaudrez, jazema, barmarti.*
 
-Un jeu de plateau à 4 joueurs (Tock : pions, cartes, maisons) jouable dans le navigateur.
-Les places vides sont prises par des IA, et la partie se joue en temps réel grâce aux WebSockets.
+# TocGameOnline
 
-| Couche | Techno |
+## Table of contents
+
+1. [Description](#description)
+2. [Instructions](#instructions)
+3. [Team information](#team-information)
+4. [Project management](#project-management)
+5. [Technical stack](#technical-stack)
+6. [Architecture](#architecture)
+7. [Database schema](#database-schema)
+8. [Features](#features)
+9. [Modules](#modules)
+10. [Game engine](#game-engine)
+11. [Real time: WebSockets](#real-time-websockets)
+12. [Visual identity and design system](#visual-identity-and-design-system)
+13. [Error handling and logs](#error-handling-and-logs)
+14. [Individual contributions](#individual-contributions)
+15. [Challenges and trade-offs](#challenges-and-trade-offs)
+16. [Resources](#resources)
+17. [Known limitations](#known-limitations)
+
+---
+
+## Description
+
+**TocGameOnline** is an online version of **Tock** (le jeu de Toc), a French board game played with pawns and a standard 52-card deck. Four players race their four pawns around the board and into their home. Cards decide the moves: the 4 goes backwards, the Jack swaps two pawns, the 7 can be split between several pawns, and landing on a pawn sends it back to its spawn.
+
+The goal of the project was to build a complete real-time multiplayer web game, from the rules engine to the hand-drawn interface.
+
+**Key features**
+
+- Real-time games for **4 players**, created and joined with an invite code.
+- Empty seats are taken by **AI opponents**, with three levels (easy, medium, hard).
+- A player who leaves is **replaced by a bot** and can come back to the game at any time.
+- **In-game chat**, game log, move previews, and explanations of why a card cannot be played.
+- **User accounts**: sign up, log in, profile with bio and avatar, password change, log out, account deletion.
+- **Friends** with live online status.
+- A custom **hand-drawn design system** (paper, ink and worn lines) and animated illustrations.
+- Centralised **logs** in an ELK stack.
+
+---
+
+## Instructions
+
+### Prerequisites
+
+| Tool | Version |
 |---|---|
-| Frontend | Next.js 16 (Pages Router), React 19, Tailwind 4, shadcn/ui, motion, socket.io-client |
-| Backend | NestJS 11, socket.io, JWT en cookies, bcrypt |
-| Base de données | PostgreSQL 18 via Prisma 7 (adapter `pg`) |
-| Reverse proxy | nginx (HTTPS, certificat auto-signé) |
-| Orchestration | Docker Compose |
+| Docker + Docker Compose, or Podman + podman-compose | tested with Podman 5.8 and podman-compose 1.6 |
+| Firefox, Google Chrome or any browser | latest stable |
 
----
+Nothing else needs to be installed on the host: Node, PostgreSQL, nginx and the ELK stack all run in containers.
 
-## Sommaire
+### Environment
 
-1. [Lancer le projet](#1-lancer-le-projet)
-2. [Vue d'ensemble de l'architecture](#2-vue-densemble-de-larchitecture)
-3. [Arborescence](#3-arborescence)
-4. [Backend](#4-backend)
-5. [Le moteur de jeu (`engine/`)](#5-le-moteur-de-jeu-engine)
-6. [Temps réel : WebSockets](#6-temps-réel--websockets)
-7. [Frontend](#7-frontend)
-8. [Identité visuelle et design system](#8-identité-visuelle-et-design-system)
-9. [Base de données (Prisma)](#9-base-de-données-prisma)
-10. [État du projet / reste à faire](#10-état-du-projet--reste-à-faire)
-11. [Gestion des erreurs et logs](#11-gestion-des-erreurs-et-logs)
-
----
-
-## 1. Lancer le projet
-
-### Prérequis
-- Docker + Docker Compose
-- Deux fichiers d'environnement (non fournis, à créer) :
-
-| Fichier | Variables | Utilisé par |
-|---|---|---|
-| `.env` (racine) | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | postgres, frontend, nginx |
-| `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET` (+ `PORT`, optionnel, 3001 par défaut) | backend |
-
-Exemple de `DATABASE_URL` : `postgresql://<user>:<password>@postgres:5432/<db>`. L'hôte est `postgres`, le nom du service Docker.
-
-### Démarrer
+Credentials are never committed. Two example files are provided; copy them and fill in your own values:
 
 ```bash
-docker compose up --build      # premier lancement
-docker compose up -d           # en arrière-plan
-docker compose logs -f backend # suivre les logs d'un service
-docker compose down            # tout arrêter (les données restent dans le volume db_data)
+cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-Ensuite, ouvrir **https://localhost:8443**. Le navigateur affiche un avertissement : le certificat est auto-signé, il faut l'accepter.
-
-Au démarrage, le backend applique automatiquement les migrations (`prisma migrate deploy`), génère le client Prisma et démarre en mode watch. Les dossiers `backend/` et `frontend/` sont montés en volume : le code se recharge à chaud, pas besoin de rebuild à chaque modif.
-
----
-
-## 2. Vue d'ensemble de l'architecture
-
-```
-                              navigateur
-                                  │
-                                  │  https://localhost:8443
-                                  ▼
-                   ┌──────────────────────────────┐
-                   │            nginx             │
-                   │  TLS, point d'entrée unique  │
-                   └──────────────────────────────┘
-                      │            │            │
-      URL qui commence par :       │            │
-                      │            │            │
-                    "/"         "/api/"       "/ws/"
-                  (pages)       (HTTP)     (WebSocket)
-                      │            │            │
-                      ▼            └─────┬──────┘
-         ┌──────────────────┐            ▼
-         │     frontend     │  ┌──────────────────────────────┐
-         │  Next.js  :3000  │  │           backend            │
-         └──────────────────┘  │         NestJS :3001         │
-                               │                              │
-                               │  AuthModule    (HTTP)        │
-                               │  ProfileModule (HTTP)        │
-                               │  GameModule    (HTTP + WS)   │
-                               │     └── engine/ (pur, sans   │
-                               │         Nest ni BDD)         │
-                               └──────────────┬───────────────┘
-                                              │ Prisma
-                                              ▼
-                                     ┌─────────────────┐
-                                     │   PostgreSQL    │
-                                     └─────────────────┘
-```
-
-nginx regarde le début de l'URL demandée et envoie la requête au bon conteneur (`nginx/nginx.conf`) :
-
-| URL demandée | Envoyée à | Exemple |
+| File | Variables | Used by |
 |---|---|---|
-| `/api/...` | backend `:3001` | `POST /api/auth/login`, `POST /api/game` |
-| `/ws/...` | backend `:3001`, en gardant la connexion WebSocket ouverte (`Upgrade`) | le socket.io du jeu (`/ws/socket.io`) |
-| tout le reste (`/`) | frontend `:3000` | `/login`, `/lobby`, `/play`, les images… |
+| `.env` | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | postgres, frontend, nginx |
+| `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `PORT` (optional, 3001 by default) | backend |
 
-Donc `/api/` et `/ws/` vont **tous les deux au backend**. Seules les pages vont au frontend.
-Le navigateur ne parle jamais directement au frontend ou au backend : il passe toujours par nginx sur le port 8443. Seul le backend parle à PostgreSQL.
+`DATABASE_URL` must use the same user, password and database as `.env`, with `postgres` (the Docker service name) as host:
+`postgresql://<user>:<password>@postgres:5432/<db>`.
 
-**Principes clés :**
+### Run
 
-- **Un seul point d'entrée : nginx.** Le front et le back sont servis sur le même domaine, donc les cookies passent partout et il n'y a pas de CORS.
-- **Le serveur fait autorité.** Toute la logique de jeu vit côté serveur. Le front n'applique aucune règle : il envoie une intention (« je joue cette carte sur ce pion »), et le serveur la valide ou la refuse.
-- **L'état d'une partie en cours vit en mémoire** (une `Map` dans `GameService`). La base de données ne stocke que ce qui doit durer : utilisateurs, profils, parties et participants.
-- **Le moteur de jeu est pur.** `backend/src/game/engine/` ne contient que des fonctions `(état, action) -> nouvel état`, sans Nest, sans Prisma et sans mutation. Il est donc facile à tester et à comprendre.
-
----
-
-## 3. Arborescence
-
-```
-.
-├── docker-compose.yml
-├── nginx/
-│   ├── Dockerfile            génère le certificat auto-signé
-│   └── nginx.conf            routes / , /api/ , /ws/
-├── backend/
-│   ├── prisma/
-│   │   ├── schema.prisma     modèles de la BDD
-│   │   └── migrations/
-│   ├── generated/prisma/     client Prisma généré (ne pas éditer)
-│   └── src/
-│       ├── main.ts           préfixe global /api, cookie-parser
-│       ├── app.module.ts
-│       ├── prisma/           PrismaService (connexion BDD, global)
-│       ├── auth/             inscription, login, refresh, logout, AuthGuard
-│       ├── profile/          lecture / modification du profil
-│       └── game/
-│           ├── game.types.ts       TOUS les types du jeu (source de vérité)
-│           ├── game.controller.ts  HTTP : créer / rejoindre / lancer
-│           ├── game.gateway.ts     WebSocket : sync / action / broadcast
-│           ├── game.service.ts     parties en mémoire, commit, bots
-│           ├── broadcast.md        notes de conception du temps réel
-│           └── engine/             règles du jeu (pur)
-├── frontend/
-│   ├── public/               images des cartes, etc.
-│   └── src/
-│       ├── pages/            une page = une route (Pages Router)
-│       ├── api/              appels HTTP vers le backend
-│       ├── game/             tout le plateau : socket, hooks, pions, cartes
-│       ├── components/       UI réutilisable (auth, layout, rules, ui/ = shadcn)
-│       ├── lib/              petits utilitaires
-│       └── styles/
-└── debrief_websocket.md      compte rendu de l'intégration WebSocket
+```bash
+docker compose up --build
 ```
 
----
+Then open **https://localhost:8443**. The certificate is self-signed, so the browser shows a warning that has to be accepted once.
 
-## 4. Backend
+On start-up the backend applies the database migrations (`prisma migrate deploy`) and generates the Prisma client by itself: there is no manual step.
 
-Toutes les routes HTTP sont préfixées par **`/api`** (`app.setGlobalPrefix('api')`).
-
-### 4.1 Authentification (`auth/`)
-
-- L'utilisateur s'inscrit, puis se connecte avec son email et son mot de passe. Le mot de passe est hashé avec bcrypt.
-- Au login, le serveur pose **deux cookies `httpOnly`, `secure`, `sameSite=strict`** :
-  - `jwt` : l'access token, valable **15 min**, signé avec `JWT_SECRET` ;
-  - `refresh_token` : valable **7 jours**, signé avec `JWT_REFRESH_SECRET`. Son hash est stocké en BDD (`User.hashedRefreshToken`), ce qui permet de le révoquer.
-- `AuthGuard` lit le cookie `jwt` et place le payload `{ sub: userId, username }` dans `req.user`.
-- Quand un appel renvoie 401, le front appelle `/api/auth/refresh` puis réessaie (voir `frontend/src/api/game.ts`).
-- Le `JwtModule` est enregistré en `global: true`, donc `JwtService` est injectable partout, y compris dans la gateway WebSocket.
-
-| Méthode | Route | Auth | Rôle |
-|---|---|---|---|
-| POST | `/api/auth/register` | — | `{ email, name, password }` : crée le user et un profil vide |
-| POST | `/api/auth/login` | — | `{ email, password }` : pose les cookies |
-| POST | `/api/auth/refresh` | cookie refresh | renouvelle les deux tokens (rotation) |
-| POST | `/api/auth/logout` | ✔ | invalide le refresh token et supprime les cookies |
-
-### 4.2 Profil (`profile/`)
-
-| Méthode | Route | Auth | Rôle |
-|---|---|---|---|
-| GET | `/api/profile` | ✔ | profil du user connecté (+ `name`, `email`) |
-| PATCH | `/api/profile` | ✔ | `{ bio?, avatar? }` |
-
-### 4.3 Jeu (`game/`)
-
-Le module est découpé en trois couches, chacune avec un rôle précis :
-
-| Fichier | Rôle | Connaît… |
-|---|---|---|
-| `game.controller.ts` | routes HTTP (create / join / start) | le service |
-| `game.gateway.ts` | WebSocket : auth du socket, messages `sync` / `action`, envoi de l'état | le service, `viewFor` |
-| `game.service.ts` | possède la `Map` des parties, vérifie qui a le droit de jouer, persiste en BDD, fait jouer les bots | Prisma, l'engine |
-| `engine/*` | les règles | rien d'autre que `game.types.ts` |
-
-Routes HTTP (toutes protégées par `AuthGuard`) :
-
-| Méthode | Route | Rôle | Réponse |
-|---|---|---|---|
-| POST | `/api/game` | crée une partie, le créateur est au siège 0 (hôte) | `{ gameId, inviteCode }` |
-| POST | `/api/game/join/:inviteCode` | rejoint une partie en attente | `{ gameId, inviteCode }` |
-| POST | `/api/game/start/:gameId` | l'hôte lance la partie, les places vides sont remplies par des IA | `{ gameId }` |
-
-Ces routes ne renvoient **jamais** l'état de la partie. L'état arrive toujours par le WebSocket (voir §6).
-
-#### `commit` : la règle d'or du service
-
-```ts
-private commit(game, event = null) {
-    this.games.set(game.id, game);   // le serveur s'en souvient
-    this.broadcast?.(game, event);   // les joueurs le voient
-}
-```
-
-Chaque changement d'état visible (création, join, start, chaque coup humain, chaque coup de bot) passe par **un** `commit`. Il n'y a jamais d'état intermédiaire.
-
-#### Les bots
-
-Après chaque coup humain (et au `start`), `runBots` fait jouer les IA à la suite, avec **1 s de pause** et **un commit par coup** pour que les joueurs voient chaque coup. Pendant ce temps, un humain qui essaie de jouer est rejeté par le check « Not your turn », qui sert donc aussi de verrou.
-L'IA actuelle (`engine/AI.ts`) choisit un coup légal au hasard.
-
----
-
-## 5. Le moteur de jeu (`engine/`)
-
-Tous les types sont dans `game/game.types.ts`. Chaque fonction de l'engine prend un état et renvoie un **nouvel** état, sans jamais le modifier.
-
-### 5.1 Le plateau
-
-```
-BOARD_CELLS_COUNT = 72     cases 0 → 71, numérotation ABSOLUE (la même pour tous)
-CELLS_PER_SEAT    = 18     écart entre deux sorties
-HOME_CELLS_COUNT  = 4      maison : 0 = entrée (côté plateau), 3 = fond
-
-siège 0 : sortie case  0   entrée de maison case 69
-siège 1 : sortie case 18   entrée de maison case 15
-siège 2 : sortie case 36   entrée de maison case 33
-siège 3 : sortie case 54   entrée de maison case 51
-```
-
-- `startCell(seat) = seat * 18` : la case où arrive un pion qui sort.
-- `getStartHome(seat) = startCell - 3` (mod 72) : la dernière case avant la maison. Un pas plus loin, on est en `home 0`.
-- Un pion a trois positions possibles : `{ zone: 'spawn' }`, `{ zone: 'board', cell }` ou `{ zone: 'home', cell }`.
-- Les calculs de case passent par `mod()` (`utils.ts`) pour boucler de 71 à 0, y compris en marche arrière.
-
-### 5.2 Les cartes
-
-- 52 cartes (4 couleurs × 1..13). Une `CardId` est une string `"heart_7"`.
-- 4 joueurs, **5 cartes par manche**. Quand toutes les mains sont vides, on redistribue, et la défausse est remélangée si la pioche ne suffit plus.
-- `realValueOf(card)` (`deck.ts`) donne le **nombre de cases** : c'est la valeur de la carte, sauf **le 4, qui vaut −4 (recul)**. Les règles et `applyAction` utilisent toutes les deux cette fonction, pour que validation et application ne divergent jamais.
-
-| Carte | Effet |
+| Command | Effect |
 |---|---|
-| 1 (As), 13 (Roi) | sortir un pion du spawn (`exit`), ou avancer |
-| 4 | reculer de 4 |
-| 11 (Valet) | échanger deux pions du plateau (`swap`) |
-| 7 | *prévu : répartir 7 pas entre plusieurs pions (`split`), pas encore codé* |
-| autres | avancer du nombre de cases |
+| `docker compose up --build -d` | start everything in the background |
+| `docker compose logs -f backend` | follow the logs of one service |
+| `docker compose down` | stop everything (data stays in the `db_data` volume) |
+| `docker compose down -v` | stop everything and **erase** the database |
 
-### 5.3 Les actions
+---
+
+## Team information
+
+| Member | Role(s) | Responsibilities |
+|---|---|---|
+| **elaudrez** | Tech Lead, Developer | Chose the technical stack (the team aligned on it, given a DevOps profile). Owns the infrastructure: Docker Compose, nginx and HTTPS, PostgreSQL and Prisma set-up, ELK. Worked on authentication and profile. |
+| **nadeluge** | Project Manager, Developer | Brought the team together and coordinated the work, present on site from August to the end. Owns the game: rules engine, AI, game service and WebSockets. Also profile, friends, design system and error handling. |
+| **jazema** | Product Owner, Developer | Brought experience from large web projects at Epitech and set the product priorities. Owns most of the front end of the game: board and pawn animations, in-game chat, turn feedback, card hints. Helped wherever needed ("joker"). |
+| **barmarti** | Developer | General-purpose developer: authentication, profile and friends, tests. Being a dad too. |
+
+
+---
+
+## Project management
+
+- **Organisation.** Work was split by area: infrastructure and DevOps (elaudrez), game engine and real time (nadeluge), game front end (jazema),  cross-cutting work (barmarti). Everyone could take tasks in other areas when needed.
+- **Task tracking.** We started with GitHub Issues, but it didn't stick. We moved to a shared **Notion** page and plain to-do lists.txt.
+- **Communication.** **Discord** for daily messages and for meetings. Meetings were screen-sharing sessions where someone walked the others through their code. As we kept each other informed every day, few formal meetings were needed.
+- **Git workflow.** One branch per person (`nardis_dev`, `elsa`, `dev_barn`…) → merged into **`dev`** → tested and reviewed → merged into **`main`** once stable.
+
+---
+
+## Technical stack
+
+| Layer | Technology | Why we chose it |
+|---|---|---|
+| Front end | **Next.js 16** (Pages Router), **React 19** | React's component model fits a game UI made of many small animated pieces. Next.js gives routing, server rendering and image optimisation out of the box. |
+| Front end | **Tailwind CSS 4**, shadcn/ui (as a base, restyled) | Design tokens defined once and reused everywhere as classes. shadcn gives accessible primitives that we own and can restyle. |
+| Front end | **motion** | Spring animations for pawns, cards and illustrations, declared in React. |
+| Back end | **NestJS 11** (TypeScript) | A structured framework with modules, guards, pipes and WebSocket gateways. TypeScript on both sides lets the front and the back share the same game types. |
+| Real time | **socket.io** | Rooms, automatic reconnection and acknowledgements, which a turn-based game needs. |
+| Database | **PostgreSQL 18** | Our data is relational: users, profiles, friendships, games and players are linked by foreign keys, and we need uniqueness and cascades enforced by the database. |
+| ORM | **Prisma 7** | A readable schema, versioned migrations and a fully typed client. |
+| Auth | JWT in **httpOnly cookies**, **bcrypt** | Tokens unreadable by JavaScript (protected from XSS), passwords hashed and salted. |
+| Reverse proxy | **nginx** | Single HTTPS entry point: front end, API and WebSockets on the same origin, so no CORS. |
+| Logs | **Elasticsearch, Logstash, Kibana**, pino | Structured JSON logs from the backend and nginx, searchable in one place. |
+| Containers | **Docker Compose** | The whole project starts with one command. |
+
+---
+
+## Architecture
+
+```
+                              browser
+                                 │
+                                 │  https://localhost:8443
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │            nginx             │
+                  │   TLS, single entry point    │
+                  └──────────────────────────────┘
+                     │            │            │
+                    "/"        "/api/"       "/ws/"
+                  (pages)      (HTTP)     (WebSocket)
+                     │            │            │
+                     ▼            └─────┬──────┘
+        ┌──────────────────┐            ▼
+        │     frontend     │  ┌──────────────────────────────┐
+        │  Next.js  :3000  │  │           backend            │
+        └──────────────────┘  │         NestJS :3001         │
+                              │                              │
+                              │  AuthModule     (HTTP)       │
+                              │  ProfileModule  (HTTP)       │
+                              │  FriendsModule  (HTTP + WS)  │
+                              │  GameModule     (HTTP + WS)  │
+                              │     └── engine/ (pure, no    │
+                              │         Nest, no database)   │
+                              └──────────────┬───────────────┘
+                                             │ Prisma
+                                             ▼
+                                    ┌─────────────────┐
+                                    │   PostgreSQL    │
+                                    └─────────────────┘
+```
+
+**Key principles**
+
+- **One entry point: nginx.** The browser never talks to the front end or the back end directly. `/api/` and `/ws/` go to the backend, everything else goes to Next.js.
+- **The server is the authority.** The front end applies no rule: it sends an intention ("I play this card on this pawn"), and the server checks it and accepts or refuses it.
+- **A running game lives in memory** (a `Map` in `GameService`). The database stores only what must last: users, profiles, friendships, games and who played them.
+- **The rules engine is pure.** `backend/src/game/engine/` only contains functions of the form `(state, action) → new state`, with no Nest, no Prisma and no mutation. This makes it easy to read, test and reuse.
+
+### Main HTTP routes
+
+All routes are prefixed with `/api`. ✔ = needs a logged-in user (`AuthGuard`).
+
+| Method | Route | Auth | Purpose |
+|---|---|---|---|
+| POST | `/auth/register` | — | create an account and an empty profile |
+| POST | `/auth/login` | — | set the `jwt` and `refresh_token` cookies |
+| POST | `/auth/refresh` | refresh cookie | new pair of tokens (rotation) |
+| GET | `/auth/session` | — | who is logged in (`{ user }` or `{ user: null }`) |
+| PATCH | `/auth/password` | ✔ | change password, other devices are logged out |
+| POST | `/auth/logout` | ✔ | revoke the refresh token, clear the cookies |
+| GET · PATCH · DELETE | `/profile` | ✔ | read, edit (name, bio), delete the account |
+| POST · DELETE | `/profile/avatar` | ✔ | upload or remove the avatar |
+| GET | `/friends` | ✔ | friends, incoming and outgoing requests |
+| POST | `/friends/requests` | ✔ | send a friend request |
+| POST | `/friends/requests/:userId/accept` | ✔ | accept a request |
+| DELETE | `/friends/:userId` | ✔ | remove a friend, decline or cancel a request |
+| POST | `/game` | ✔ | create a game (the creator is the host, seat 0) |
+| POST | `/game/join/:inviteCode` | ✔ | join a waiting game |
+| POST | `/game/:gameId/start` | ✔ | the host starts the game, bots fill the empty seats |
+| POST | `/game/ai-level/:gameId/:seat/:level` | ✔ | the host sets a bot's level |
+
+---
+
+## Database schema
+
+Schema: `backend/prisma/schema.prisma`, with one migration per change in `backend/prisma/migrations/`.
+
+```
+                 ┌──────────────────────┐
+                 │         User         │
+                 │ id            Int PK │
+                 │ name       String UQ │
+                 │ email      String UQ │
+                 │ password      String │  (bcrypt hash)
+                 │ hashedRefreshToken ? │  (SHA-256 hash)
+                 │ createdAt / updatedAt│
+                 └──────────────────────┘
+          1 │ 1            1 │ *              1 │ *  (twice)
+            ▼                ▼                  ▼
+ ┌──────────────────┐ ┌───────────────────┐ ┌─────────────────────────────┐
+ │     Profile      │ │    GamePlayer     │ │         Friendship          │
+ │ userId Int FK UQ │ │ idPlayer   Int PK │ │ id               Int PK     │
+ │ bio      String? │ │ userId     Int FK │ │ requesterId      Int FK     │
+ │ avatarUrl String?│ │ gameId     Int FK │ │ addresseeId      Int FK     │
+ └──────────────────┘ │ seat          Int │ │ status  pending | accepted  │
+                      │ joindedAt         │ │ createdAt                   │
+                      └───────────────────┘ │ UQ(requesterId,addresseeId) │
+                               * │          └─────────────────────────────┘
+                                 ▼ 1
+                      ┌─────────────────────────────────┐
+                      │              Game               │
+                      │ idGame         Int PK           │
+                      │ inviteCode     String UQ        │
+                      │ phase  waiting|playing|finished │
+                      │ winnerSeat     Int?             │
+                      │ createdAt / finishedAt?         │
+                      └─────────────────────────────────┘
+```
+
+| Table | Role |
+|---|---|
+| `User` | an account. The password and the refresh token are only stored as hashes. |
+| `Profile` | public information, created empty at sign-up. |
+| `Friendship` | one row per pair of users: a pending request or an accepted friendship. |
+| `Game` | one game: invite code, phase, winner. |
+| `GamePlayer` | a human sitting on a seat of a game. Bots are not stored. |
+
+Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`onDelete: Cascade`).
+
+> The database does **not** store the state of a running game (pawns, cards): it lives in memory in `GameService`. If the backend restarts, games in progress are lost.
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| Sign up / log in | Email and password, server-side checks, bcrypt hash, JWT in httpOnly cookies |
+| Session refresh | 15-minute access token, 7-day refresh token with rotation, stored as a hash and revocable |
+| Private pages | Every page except login, register, rules and legal pages sends to `/login` when nobody is logged in |
+| Profile | Name, bio, avatar upload (checked on the real file bytes, with initials by default), statistics |
+| Account | Change password, log out, delete the account (password asked again) |
+| Friends | Send, accept, decline, remove; online status updated live |
+| Create / join a game | Invite code, live waiting room, the host sets the bot levels |
+| Rules engine | All Tock rules: exit, move, enter home, swap (Jack), back (4), split (7), captures, blocking, discard |
+| AI opponents | Three levels (easy, medium, hard), human-like delay between moves |
+| Disconnections | Grace delay, a bot plays for the missing player, the player can reconnect at any time |
+| Game board | Board seen from your own seat, animated pawns, move previews, card hand, played-card colours |
+| Turn feedback | Turn banner, game log, card hints and reasons why a card cannot be played |
+| In-game chat | Messages between the players of a game, history kept for players who reconnect |
+| Win screen | Winner announcement with confetti |
+| Rules page | Every card explained, with tilting cards |
+| Privacy Policy / Terms of Service | Real content, linked from the footer |
+| Infrastructure | Docker Compose, nginx (HTTPS), PostgreSQL, Prisma migrations |
+| Logs | ELK stack, structured logs, error-handling layers |
+
+---
+
+## Modules
+
+**Total claimed: 20 points** (14 required, the bonus is capped at 5).
+
+| # | Module | Type | Points | Member(s) |
+|---|---|---|---|---|
+| 1 | Web — Use a framework for both the front end and the back end | Major | 2 | everyone |
+| 2 | Web — Real-time features using WebSockets | Major | 2 | nadeluge, jazema |
+| 3 | Web — Allow users to interact with other users | Major | 2 | nadeluge, jazema |
+| 4 | Web — Use an ORM for the database | Minor | 1 | elaudrez |
+| 5 | Web — Custom-made design system | Minor | 1 | nadeluge, jazema |
+| 6 | User Management — Standard user management and authentication | Major | 2 | nadeluge, elaudrez, barmarti |
+| 7 | Gaming — Complete web-based game | Major | 2 | nadeluge, jazema |
+| 8 | Gaming — Remote players | Major | 2 | nadeluge, jazema |
+| 9 | Gaming — Multiplayer game (more than two players) | Major | 2 | nadeluge |
+| 10 | AI — AI opponent | Major | 2 | nadeluge |
+| 11 | DevOps — Log management with ELK | Major | 2 | elaudrez |
+| | **Total** | | **20** | |
+
+### 1. Frameworks (Major, 2 pts)
+- **Why:** we wanted to learn the frameworks used in companies rather than reinvent routing, validation and dependency injection.
+- **How:** Next.js 16 / React 19 for the front end, NestJS 11 for the back end (modules, guards, gateways, exception filters).
+- **Demo:** `frontend/src/pages/` (one file = one route), `backend/src/*/*.module.ts`.
+
+### 2. Real-time features with WebSockets (Major, 2 pts)
+- **Why:** a board game where four people play together needs every move to reach everyone instantly.
+- **How:** socket.io on `/ws/socket.io`, authenticated with the JWT cookie at the handshake. One room per user, so every tab of a player stays in sync. Every change of a game is broadcast to all its players; friends' online status is pushed live. Disconnections are handled: grace delay, then a bot takes over until the player comes back.
+- **Demo:** two browsers in the same waiting room, then a game: every move, chat message and seat change appears on both screens.
+
+### 3. User interaction (Major, 2 pts)
+<!-- TODO before the defense: public profile page of another user (e.g. /profile/[name], reachable from the friends list) and, if possible, chat between friends outside a game. Update this paragraph once done. -->
+- **Why:** a game is more fun with people you know: you find them, add them, and talk to them.
+- **How:** chat between the players of a game (history kept for reconnecting players), profile pages showing a user's information, and a friends system (add, accept, remove, friends list with live online status).
+- **Demo:** add a friend from `/friends`, see them come online, open their profile, chat with them during a game.
+
+### 4. ORM (Minor, 1 pt)
+- **Why:** typed queries and versioned database changes that every team member can apply.
+- **How:** Prisma 7 with the `pg` adapter, schema in `schema.prisma`, migrations applied automatically on start-up.
+- **Demo:** `backend/prisma/schema.prisma`, `backend/prisma/migrations/`.
+
+### 5. Custom-made design system (Minor, 1 pt)
+- **Why:** we wanted the game to have its own identity, not the look of a component library.
+- **How:** colour palette, type scale, icons and more than 10 reusable components built by us. See [Visual identity and design system](#visual-identity-and-design-system).
+- **Demo:** the components listed in that section, used on every page.
+
+### 6. Standard user management (Major, 2 pts)
+- **Why:** players need an identity to find friends and to be recognised in a game.
+- **How:** users update their name and bio, upload an avatar (initials are shown when there is none), add friends and see their online status, and have a profile page with their information. They can also change their password, log out and delete their account.
+- **Demo:** `/profile` and `/friends`.
+
+### 7. Complete web-based game (Major, 2 pts)
+- **Why:** Tock is a game we play in real life, with rich rules (split 7, swaps, captures) that make a real engine necessary.
+- **How:** a pure rules engine on the server, the board and cards drawn in React, clear win condition (all four pawns home), and a rules page.
+- **Demo:** create a game, start it with bots, play until the win screen.
+
+### 8. Remote players (Major, 2 pts)
+- **Why:** friends play from their own computers.
+- **How:** the game is fully server-side, players join with an invite code from any computer. A lost connection is detected; after a grace delay a bot plays for the player, and on reconnection the client asks for the current state (`sync`) and the chat history.
+- **Demo:** two computers in the same game; close one tab, watch the bot play, reopen it and continue.
+
+### 9. Multiplayer, more than two players (Major, 2 pts)
+- **Why:** Tock is played by four.
+- **How:** four seats synchronised in real time. Each player only receives what they are allowed to see (`viewFor` hides the other hands and the draw pile) and sees the board from their own seat.
+- **Demo:** three or four browsers (or private windows) with different accounts in the same game.
+
+### 10. AI opponent (Major, 2 pts)
+- **Why:** you should always be able to play, even without three friends available.
+- **How:** see [The bots](#the-bots). The host chooses the level of each bot in the waiting room; bots wait a random 1 to 3 seconds before playing, like a human.
+- **Demo:** start a game alone with three hard bots, then with easy bots, and compare.
+
+### 11. Log management with ELK (Major, 2 pts)
+<!-- TODO before the defense: log retention policy (ILM) and secured access to Kibana / Elasticsearch. Update this paragraph once done. -->
+- **Why:** with a backend, WebSockets, background bots and nginx, we needed one place to understand what happened during a game.
+- **How:** see [Error handling and logs](#error-handling-and-logs). Logs from the backend (pino) and nginx go through Logstash into Elasticsearch, with a retention policy, and are explored in Kibana with secured access.
+- **Demo:** play a move, then find it in Kibana with `context : "GameService" and gameId : <id>`.
+
+---
+
+## Game engine
+
+All game types are in `backend/src/game/game.types.ts`. Every engine function takes a state and returns a **new** state, without changing it.
+
+### Board and cards
+
+```
+BOARD_CELLS_COUNT = 72     cells 0 → 71, ABSOLUTE numbering (the same for everyone)
+CELLS_PER_SEAT    = 18     distance between two start cells
+HOME_CELLS_COUNT  = 4      home: 0 = entrance, 3 = end
+
+seat 0: start cell  0    home entrance after cell 69
+seat 1: start cell 18    home entrance after cell 15
+seat 2: start cell 36    home entrance after cell 33
+seat 3: start cell 54    home entrance after cell 51
+```
+
+| Card | Effect |
+|---|---|
+| Ace (1), King (13) | bring a pawn out of the spawn, or move forward |
+| 4 | move **backwards** 4 cells |
+| 7 | split 7 steps between several pawns; the player may stop before using all 7 |
+| Jack (11) | swap two pawns on the board |
+| others | move forward by the card value |
+
+- **Capture:** a pawn that ends its move on an occupied cell sends the occupant back to its spawn.
+- **Blocking:** a pawn on its **own** start cell cannot be passed.
+- **Deal:** 5 cards per player per round; the discard pile is reshuffled when the draw pile runs out.
+
+### Actions and files
 
 ```ts
 type GameAction =
-  | { type: 'move';    cardId, pawnId }            // avancer / reculer (plateau ou maison)
-  | { type: 'enter';   cardId, pawnId }            // entrer dans la maison
-  | { type: 'exit';    cardId, pawnId }            // sortir du spawn
-  | { type: 'swap';    cardId, pawnIdA, pawnIdB }  // Valet
-  | { type: 'split';   cardId, steps[] }           // 7 (TODO)
-  | { type: 'discard'; cardId }                    // défausser une carte injouable
+  | { type: 'move';    cardId, pawnId }            // forward / backward
+  | { type: 'enter';   cardId, pawnId }            // into the home
+  | { type: 'exit';    cardId, pawnId }            // out of the spawn
+  | { type: 'swap';    cardId, pawnIdA, pawnIdB }  // Jack
+  | { type: 'split';   cardId, steps[] }           // one part of a 7
+  | { type: 'discard'; cardId }                    // no legal move with this card
 ```
 
-Les actions ne contiennent **que des ids**, jamais de cases : le serveur recalcule tout lui-même.
+Actions only contain ids, never cells: the server computes everything itself.
 
-### 5.4 Les fichiers et le chemin d'un coup
-
-| Fichier | Contenu |
+| File | Content |
 |---|---|
-| `board.ts` | géométrie : `startCell`, `getStartHome`, `homeCellIndex`, `pathCells`, `pawnAt`… |
-| `deck.ts` | création et mélange du paquet, distribution, `playCard`, `realValueOf` |
-| `rules.ts` | `canExit`, `canMove`, `canGoHome`, `canMoveInHome`, `canSwap`, `canDiscard` : **un coup est-il permis ?** |
-| `legalMoves.ts` | `getLegalActions` (liste de tous les coups légaux) et `isLegal` (l'action reçue en fait-elle partie ?) |
-| `apply.ts` | `applyAction` : **applique** un coup déjà validé, déplace les pions et gère les captures |
-| `state.ts` | cycle de vie : `initGame`, `addPlayer`, `initStartingGame` (remplit avec des IA), `startRound`, `playTurn`, `checkWinner`, `nextSeat` |
-| `view.ts` | `viewFor(game, seat)` : ce qu'un joueur a le droit de voir |
-| `AI.ts` | `chooseAIAction` |
+| `board.ts` | geometry: start cells, home entrances, paths, distances |
+| `deck.ts` | deck, shuffle, deal, the value of each card (the 4 is −4) |
+| `rules.ts` | can this pawn exit, move, enter home, swap…? |
+| `split.ts` | the 7 played in several parts |
+| `legalMoves.ts` | `getLegalActions` (every legal move) and `isLegal` |
+| `apply.ts` | applies a validated move: pawns, captures |
+| `state.ts` | game life cycle: create, add players, deal, play a turn, winner |
+| `view.ts` | `viewFor(game, seat)`: what one player is allowed to see |
+| `AI/` | the three bot levels |
 
-```
-playTurn(game, seat, action)
-  1. isLegal(...)        refusé → null → "Illegal move"
-  2. applyAction(...)    nouveaux pions + pions capturés
-  3. playCard(...)       la carte passe de la main à la défausse
-  4. checkWinner(...)    tous les pions d'un joueur en maison → phase 'finished'
-  5. nextSeat(...)
-  6. isRoundOver ?       → startRound (nouvelle distribution), event.newRound = true
-  → { game, event }
-```
+### One list of legal moves, used three times
 
-**Captures :** un pion qui termine son déplacement (ou sa sortie) sur une case occupée renvoie l'occupant au spawn, même si c'est un de ses propres pions.
-**Blocage :** un pion posé sur **sa propre** case de sortie bloque le passage à tous les autres.
+`getLegalActions` computes once the list of every legal move for a hand. It is the backbone of the project:
+
+- **validation:** the server refuses any action that is not in the list, so a modified client cannot cheat;
+- **the bots** only ever choose inside this list;
+- **the front end** gets the same rules to show which pawns can move, preview the moves, and explain why a card is dead.
+
+### The bots
+
+| Level | Strategy |
+|---|---|
+| **easy** | a random legal move |
+| **medium** | scores the board after each legal move (progress of its pawns, bonus for exiting and entering home, malus when an opponent is just behind) and plays the best one |
+| **hard** | medium's evaluation, plus: it counts the cards not seen yet to estimate the real danger of each cell, plans the whole 7 (every way to split it, with a cache so it stays fast), and keeps special cards (4, 5, Jack, 7) for when they are worth the most by looking one move ahead |
+
+None of them sees the other players' hands or the draw pile, so even the hard bot makes mistakes and can be beaten.
 
 ---
 
-## 6. Temps réel : WebSockets
+## Real time: WebSockets
 
-Socket.io est servi sur **`/ws/socket.io`**, un chemin que nginx proxifie avec l'upgrade WebSocket.
+socket.io is served on **`/ws/socket.io`**, which nginx forwards with the WebSocket upgrade.
 
-### Connexion
+**Connection**
 
-1. Le navigateur envoie automatiquement le cookie `jwt` dans le handshake.
-2. `handleConnection` vérifie le token. S'il est invalide, le socket est déconnecté. Le front appelle alors `/api/auth/refresh` et se reconnecte.
-3. Le socket rejoint la room **`user-<userId>`**. Tous les onglets d'un même joueur reçoivent donc l'état.
+1. The browser sends the `jwt` cookie with the handshake.
+2. The gateway checks the token. If it is invalid or expired, the socket is closed; the client refreshes its session and reconnects.
+3. The socket joins the room **`user-<userId>`**, so all the tabs of a player receive the state.
 
-### Protocole
+**Protocol**
 
-| Sens | Message | Contenu | Quand |
+| Direction | Message | Content | When |
 |---|---|---|---|
-| serveur → client | `state` | `{ state: GameView, event: GameEvent \| null }` | à chaque `commit`, et en réponse à `sync` |
-| serveur → client | `no-game` | — | réponse à `sync` si le joueur n'a pas de partie |
-| client → serveur | `sync` | — | arrivée sur une page de jeu, reconnexion |
-| client → serveur | `action` | `{ gameId, action }` + ack `{ ok } \| { error }` | le joueur joue |
+| server → client | `state` | `{ state: GameView, event: GameEvent \| null }` | after every change, and in reply to `sync` |
+| server → client | `no-game` | — | reply to `sync` when the player is in no game |
+| server → client | `chat` / `chat-history` | a message / the last 50 messages | a message is sent / reply to `chat-sync` |
+| client → server | `sync` | — | arriving on a game page, reconnecting |
+| client → server | `action` | `{ gameId, action }` + ack `{ ok } \| { error }` | the player plays |
+| client → server | `chat` | `{ gameId, text }` (1 to 200 characters) | the player sends a message |
 
-### `state` et `event`
+- **`state` is the truth.** The front end displays exactly that.
+- **`event` is a hint for animations:** who played what, which pawns were captured, whether a new round was dealt.
+- The server works in **absolute** cells; the front end rotates the board so that each player sees their own seat at the bottom.
 
-- **`state` (GameView) est la vérité.** Le front affiche exactement ça. `viewFor` **cache la pioche et la main des autres** : on ne reçoit que sa propre main (`myHand`) et le nombre de cartes des autres (`handCount`).
-- **`event` (GameEvent) est un indice pour animer** : qui a joué, quelle action, quels pions ont été capturés, s'il y a eu une nouvelle distribution. Il vaut `null` quand il n'y a rien à animer.
-- Le serveur reste en coordonnées **absolues**. C'est le front qui fait tourner le plateau pour que chaque joueur se voie en bas.
-
-### Trajet complet d'un coup
+**Path of one move**
 
 ```
-clic carte + clic pion (front, useTurnChoice)
+click a card, then a pawn (front end, useTurnChoice)
   → socket.emit('action', { gameId, action }, ack)
   → GameGateway.handleAction
-  → GameService.playAction     (partie existe ? joueur dedans ? son tour ?)
+  → GameService.playAction     (game exists? player in it? their turn?)
   → playTurn (engine)          → { game, event }
   → commit                     → Map + broadcast
-  → pour chaque humain : emit('state', { state: viewFor(game, seat), event })
-  → useGame (front) → setState → React redessine, motion anime
-  → runBots : un coup par seconde, un commit par coup
+  → for each human: emit('state', { state: viewFor(game, seat), event })
+  → useGame (front end) → React redraws, motion animates
+  → the bots play, one commit per move
 ```
 
-Pour plus de détails : `backend/src/game/broadcast.md` (conception) et `debrief_websocket.md` (implémentation).
+Every visible change goes through **one** `commit` (save in the `Map`, then broadcast): there is never a half-applied state.
 
 ---
 
-## 7. Frontend
+## Visual identity and design system
 
-Next.js en **Pages Router** : chaque fichier de `src/pages/` est une route. `/` redirige vers `/login` (`next.config.ts`).
+The site has its own identity: **beige paper**, **midnight-blue ink** and **worn, hand-drawn lines**, like an old scribbled card game. Everything starts from a few tokens defined once and reused by every component.
 
-### Pages
+The images of this section are in `docs/design-system/`.
 
-| Route | Rôle |
-|---|---|
-| `/login`, `/register` | authentification |
-| `/menu` | menu principal |
-| `/profile` | profil |
-| `/rules` | règles du jeu |
-| `/create-game` | `POST /api/game` puis `/lobby` |
-| `/join-game` | saisie du code d'invitation, puis `/lobby` |
-| `/lobby` | salle d'attente en temps réel ; bouton Start pour l'hôte ; tout le monde part sur `/play` quand la partie démarre |
-| `/play` | plateau + main |
-
-### Dossier `src/game/`
-
-| Fichier | Rôle |
-|---|---|
-| `gameTypes.ts` | copie des types du backend. **À garder synchronisée avec `game.types.ts`** |
-| `socket.ts` | un seul socket pour toute l'app, créé au premier usage (jamais pendant le rendu serveur) |
-| `useGame.ts` | écoute `state` / `no-game`, émet `sync`, expose `sendAction` |
-| `useTurnChoice.ts` | construit l'action du joueur : carte, puis mode, puis pion. Aucune règle n'est vérifiée ici |
-| `boardGeometry.ts`, `boardPawns.ts`, `PawnLayer.tsx`, `Pawn.tsx`, `MovePreview.tsx` | placement et animation des pions |
-| `CardTable.tsx`, `cardDeck.ts`, `cardLayout.ts` | main, défausse, animation des cartes |
-| `TurnControls.tsx`, `PlayerAvatars.tsx` | « À toi / Tour de X », boutons de mode, joueurs |
-
-### Conventions
-
-Voir `frontend/CLAUDE.MD`. En résumé : code simple et lisible, **pas de nouvelle dépendance** en dehors de la stack (Next, React, Tailwind, shadcn, motion), et des noms explicites (`isX`, `handleX`, `onX`).
-
----
-
-## 8. Identité visuelle et design system
-
-Le site a une identité à lui : un **papier beige**, une **encre bleu nuit** et des **traits usés, dessinés à la main**, comme un vieux jeu de cartes griffonné. Tout part de quelques tokens définis une seule fois, puis réutilisés par tous les composants.
-
-Les images de cette section sont dans `docs/design-system/`.
-
-### 8.1 Couleurs
+### Colours
 
 ![Palette](docs/design-system/palette.png)
 
-Toutes les couleurs sont des variables CSS dans `frontend/src/styles/globals.css` (`:root`). Tailwind les expose en classes (`bg-primary`, `text-muted-foreground`…) : aucun composant n'écrit de couleur en dur.
+Every colour is a CSS variable in `frontend/src/styles/globals.css` (`:root`). Tailwind exposes them as classes (`bg-primary`, `text-muted-foreground`…): no component writes a colour by hand.
 
-| Rôle | Tokens | Utilisation |
+| Role | Tokens | Use |
 |---|---|---|
-| Papier | `--background`, `--card`, `--muted`, `--border` | fond des pages, cartes posées dessus, bordures |
-| Encre | `--foreground`, `--muted-foreground` | texte, traits, dessins |
-| Bleus | `--primary`, `--accent`, `--secondary` | boutons, liens, focus |
-| Équipes | `--team-0` à `--team-3` | les 4 joueurs du plateau (pions, avatars, badges) |
+| Paper | `--background`, `--card`, `--muted`, `--border` | page background, cards laid on it, borders |
+| Ink | `--foreground`, `--muted-foreground` | text, lines, drawings |
+| Blues | `--primary`, `--accent`, `--secondary` | buttons, links, focus |
+| Teams | `--team-0` to `--team-3` | the four players on the board (pawns, avatars, badges) |
 
-### 8.2 Typographie
+### Typography
 
-![Typographie](docs/design-system/typography.png)
+![Typography](docs/design-system/typography.png)
 
-- **Fraunces** (`font-heading`) : titres, noms, gros boutons. Un serif avec du caractère, qui rappelle les cartes à jouer.
-- **Public Sans** (`font-body`) : texte courant, formulaires. Sobre et lisible.
-- Les deux sont chargées par `next/font` dans `_app.tsx`.
-- Les tailles suivent une **échelle modulaire de ratio 1.333** (`@theme` dans `globals.css`), de `text-sm` (0.75 rem) à `text-5xl` (4.21 rem).
+- **Fraunces** (`font-heading`): titles, names, big buttons. A serif with character, which recalls playing cards.
+- **Public Sans** (`font-body`): body text and forms. Plain and readable.
+- Both are loaded with `next/font` in `_app.tsx`.
+- Sizes follow a **modular scale with a 1.333 ratio** (`@theme` in `globals.css`), from `text-sm` (0.75 rem) to `text-5xl` (4.21 rem).
 
-### 8.3 Le trait usé
+### The worn line
 
-C'est la signature visuelle du site. Toutes les lignes (cadres, séparateurs, soulignés, header, footer) passent par deux utilitaires CSS maison :
+This is the visual signature of the site. Every line (frames, separators, underlines, header, footer) uses two custom CSS utilities:
 
-- **`worn-line`** : un bruit SVG (`feTurbulence`) sert de masque et efface le trait par endroits, comme de l'encre usée.
-- **`worn-underline`** : la même chose pour souligner un lien, sans abîmer le texte.
+- **`worn-line`**: an SVG noise (`feTurbulence`) is used as a mask and erases the line in places, like worn ink.
+- **`worn-underline`**: the same for link underlines, without damaging the text.
 
-Les formes rondes (cases du plateau, pions, badges) utilisent `lib/game/handDrawn.ts`, qui trace des cercles et des lignes légèrement tremblés. Le tremblement dépend d'une graine fixe : le dessin ne change jamais d'un rendu à l'autre.
+Round shapes (board cells, pawns, badges) use `lib/game/handDrawn.ts`, which draws slightly shaky circles and lines. The shake depends on a fixed seed: the drawing never changes from one render to the next.
 
-### 8.4 Illustrations
+### Illustrations
 
-Les démons, les cartes et le logo (`frontend/public/`) gardent le même style d'encre que le reste du site.
+The demons, the cards and the logo (`frontend/public/`) share the same ink style as the rest of the site.
 
 <p>
-  <img src="frontend/public/demons/heart_demon.png" height="90" alt="Démon cœur">
-  <img src="frontend/public/demons/spade_demon.png" height="90" alt="Démon pique">
-  <img src="frontend/public/demons/diamond_demon.png" height="90" alt="Démon carreau">
-  <img src="frontend/public/demons/club_demon.png" height="90" alt="Démon trèfle">
+  <img src="frontend/public/demons/heart_demon.png" height="90" alt="Heart demon">
+  <img src="frontend/public/demons/spade_demon.png" height="90" alt="Spade demon">
+  <img src="frontend/public/demons/diamond_demon.png" height="90" alt="Diamond demon">
+  <img src="frontend/public/demons/club_demon.png" height="90" alt="Club demon">
   &nbsp;&nbsp;
-  <img src="frontend/public/cards/card_heart_1.png" height="90" alt="As de cœur">
-  <img src="frontend/public/cards/card_spade_13.png" height="90" alt="Roi de pique">
-  <img src="frontend/public/cards/card_diamond_11.png" height="90" alt="Valet de carreau">
+  <img src="frontend/public/cards/card_heart_1.png" height="90" alt="Ace of hearts">
+  <img src="frontend/public/cards/card_spade_13.png" height="90" alt="King of spades">
+  <img src="frontend/public/cards/card_diamond_11.png" height="90" alt="Jack of diamonds">
 </p>
 
-Les petites icônes d'interface viennent de `lucide-react` et suivent la couleur du texte (`currentColor`).
+Small interface icons come from `lucide-react` and follow the text colour (`currentColor`).
 
-### 8.5 Composants réutilisables
+### Reusable components
 
-Ces composants sont écrits par nous. Ils reçoivent leur contenu par leurs props et ne dépendent d'aucune page : on peut les poser n'importe où.
+These components are written by us. They get their content through their props and depend on no page: they can be used anywhere.
 
-#### Mise en page
+#### Layout
 
-| Composant | Rôle |
+| Component | Role |
 |---|---|
-| `PageLayout` | structure commune à toutes les pages : header, contenu centré, footer |
-| `Header` / `Footer` | bandeaux du site, séparés du contenu par un trait usé |
-| `Title` / `Subtitle` | titres de page, sur l'échelle typographique |
-| `WornFrame` | la « carte » du site : un double cadre au trait usé, les deux traits s'usant à des endroits différents |
+| `PageLayout` | the structure shared by every page: header, centred content, footer |
+| `Header` / `Footer` | the site banners, separated from the content by a worn line |
+| `Title` / `Subtitle` | page titles, on the type scale |
+| `WornFrame` | the "card" of the site: a double frame in worn lines, each line worn in different places |
 
 ![Header](docs/design-system/header.png)
 
 <img src="docs/design-system/worn-frame.png" width="320" alt="WornFrame">
 
-`WornFrame` sert pour le login, l'inscription, chaque section des règles, le profil, la page pour rejoindre une partie, la privacy policy et les terms.
+`WornFrame` is used for login, sign-up, every section of the rules, the profile, the join page, the Privacy Policy and the Terms of Service.
 
-Les boutons et le séparateur partent de shadcn/ui mais sont repris avec nos tokens et notre typographie ; le séparateur et la variante `link` des boutons ont le trait usé :
+Buttons and the separator start from shadcn/ui but are restyled with our tokens and typography; the separator and the `link` button variant use the worn line:
 
-![Boutons et séparateur](docs/design-system/buttons.png)
+![Buttons and separator](docs/design-system/buttons.png)
 
-#### Cartes
+#### Cards
 
-| Composant | Props | Rôle |
+| Component | Props | Role |
 |---|---|---|
-| `TiltCard` | `imagePath`, `label` | une carte qui s'incline vers le pointeur et grossit au survol (ressort `motion`) |
-| `CardRule` | `name`, `imagePath`, `children` | une `TiltCard` avec son nom et son explication |
+| `TiltCard` | `imagePath`, `label` | a card that tilts towards the pointer and grows on hover (`motion` spring) |
+| `CardRule` | `name`, `imagePath`, `children` | a `TiltCard` with its name and explanation |
 
-<img src="docs/design-system/tilt-card.gif" width="450" alt="TiltCard au survol">
+<img src="docs/design-system/tilt-card.gif" width="450" alt="TiltCard on hover">
 
-![CardRule dans un WornFrame](docs/design-system/card-rules.png)
+![CardRule in a WornFrame](docs/design-system/card-rules.png)
 
-#### Démons et animations
+#### Demons and animations
 
-| Composant | Props | Rôle |
+| Component | Props | Role |
 |---|---|---|
-| `DemonCircle` | `children`, `variant` | une ronde de démons qui tourne autour (ou au-dessus) de n'importe quel contenu |
-| `DemonDrawing` | `image` | n'importe quel dessin de démon, passé à l'encre de la palette |
-| `SparkleTrail` | `getSpots` | traînée d'étincelles derrière ce qui bouge (les démons de la ronde) |
-| `DemonCampfire` | — | les quatre démons qui dansent autour du feu (menu) |
-| `CracklingFire` | — | le feu animé, fait entièrement en code |
-| `AngerMarks` | `isVisible` | petites marques de colère au-dessus d'un personnage |
+| `DemonCircle` | `children`, `variant` | a ring of demons turning around (or over) any content |
+| `DemonDrawing` | `image` | any demon drawing, inked with the palette |
+| `SparkleTrail` | `getSpots` | a trail of sparkles behind what moves (the demons of the ring) |
+| `DemonCampfire` | — | the four demons dancing around the fire (menu) |
+| `CracklingFire` | — | the animated fire, made entirely in code |
+| `AngerMarks` | `isVisible` | small anger marks above a character |
 
 <p>
   <img src="docs/design-system/demon-circle.gif" width="380" alt="DemonCircle">
-  <img src="docs/design-system/campfire.gif" width="440" alt="DemonCampfire et CracklingFire">
+  <img src="docs/design-system/campfire.gif" width="440" alt="DemonCampfire and CracklingFire">
 </p>
 
-#### Jeu
+#### Game
 
-| Composant | Props | Rôle |
+| Component | Props | Role |
 |---|---|---|
-| `SeatBadge` | `seat`, `isTaken` | le démon d'un siège dans un cercle tremblé aux couleurs de l'équipe ; grisé et en pointillés si la place est libre |
-| `Pawn` | `color`, `position`, `path`, `isSelectable`, `onClick`… | pion dessiné à la main, qui marche case par case le long de `path` |
-| `TurnBanner` | `isMyTurn`, `mySeat` | « À toi de jouer ! » écrit un instant en travers du plateau |
-| `WinScreen` | `winnerSeat`, `winnerName`, `isMe` | écran de victoire avec confettis |
-| `PasswordInput` | props d'un `input` | champ mot de passe avec bouton afficher / masquer |
+| `SeatBadge` | `seat`, `isTaken` | a seat's demon in a shaky circle in the team colour; greyed and dotted when the seat is free |
+| `Pawn` | `color`, `position`, `path`, `isSelectable`, `onClick`… | a hand-drawn pawn that walks cell by cell along `path` |
+| `TurnBanner` | `isMyTurn`, `mySeat` | "Your turn!" written for a moment across the board |
+| `WinScreen` | `winnerSeat`, `winnerName`, `isMe` | the win screen with confetti |
+| `PasswordInput` | the props of an `input` | a password field with a show / hide button |
 
 ---
 
-## 9. Base de données (Prisma)
+## Error handling and logs
 
-Schéma : `backend/prisma/schema.prisma`. Le client est généré dans `backend/generated/prisma`.
+The logs of the backend and nginx are centralised in the ELK stack: **Kibana**, index `app-logs-*`. The full guide (levels, fields, filters, tests) is in [`docs/logs-guide.md`](docs/logs-guide.md).
 
-```
-User 1───1 Profile           (bio, avatarUrl)
-User 1───* GamePlayer *───1 Game
-                               (inviteCode, phase, winnerSeat, finishedAt)
-```
-
-| Modèle | Rôle |
-|---|---|
-| `User` | compte : `name`, `email`, `password` (hashé), `hashedRefreshToken` |
-| `Profile` | infos publiques, créées vides à l'inscription |
-| `Game` | une partie : code d'invitation, `phase` (`waiting` / `playing` / `finished`), gagnant |
-| `GamePlayer` | un humain assis à un siège d'une partie. Les IA ne sont pas stockées |
-
-> La BDD ne garde **pas** l'état de jeu (pions, cartes) : il vit en mémoire dans `GameService`. Si le backend redémarre, les parties en cours sont perdues.
-
-### Modifier le schéma
-
-Après une modification de `schema.prisma`, créer une migration :
-
-```bash
-docker compose exec backend npx prisma migrate dev --name <nom-de-la-migration>
-# ex : docker compose exec backend npx prisma migrate dev --name add-user-avatar
-```
-
-Régénérer le client si besoin :
-
-```bash
-docker compose exec backend npx prisma generate
-```
-
-Explorer la base :
-
-```bash
-docker compose exec backend npx prisma studio
-```
-
----
-
-## 10. État du projet / reste à faire
-
-**Fonctionne :** inscription / login / refresh, profil, création / join / start de partie, salle d'attente en temps réel, remplissage par des IA, coups `move` / `enter` / `exit` / `swap` / `discard`, captures, redistribution, détection du gagnant, animations.
-
-**À faire :**
-
-- [ ] **Le 7 (`split`)** : `canSplit`, `case 'split'` dans `applyAction` et dans `sameAction`.
-- [ ] **Fin de partie** : écrire `phase` / `winnerSeat` / `finishedAt` en BDD, retirer la partie de la `Map`, et faire ignorer les parties finies par `findGameOfUser`.
-- [ ] **Déconnexion / leave / abandon** : `handleDisconnect` dans la gateway, mise à jour d'`isConnected`, délai de grâce (un refresh n'est pas un abandon), route ou message `leave`, et un état « abandonnée » distinct de « terminée ».
-- [ ] **Salle d'attente** : pouvoir la quitter, et gérer le départ de l'hôte.
-- [ ] **Règles à trancher** : Valet sur un pion protégé ou sur ses propres pions, défausse autorisée si une autre carte est jouable, parties en équipes 2v2.
-- [ ] **Tests unitaires de l'engine** (Jest) : `homeCellIndex`, `enter`, passage de 71 à 0, recul du 4, captures.
-- [ ] Privacy policy et terms of use.
-
----
-
-## 11. Gestion des erreurs et logs
-
-Les logs du backend et de nginx sont centralisés dans la stack ELK : **Kibana** sur http://localhost:5601, index `app-logs-*`. Le guide complet (niveaux, champs, filtres, tests) est dans [`docs/logs-guide.md`](docs/logs-guide.md).
-
-### Le trajet d'un log
+### Path of a log
 
 ```
-NestJS (nestjs-pino) ──tcp:5000──► Logstash ──► Elasticsearch ──► Kibana
+NestJS (nestjs-pino) ──tcp:5000───► Logstash ──► Elasticsearch ──► Kibana
 nginx                ──syslog:5140─►
 ```
 
-Chaque log est un objet JSON. Le champ `service` (`backend` / `nginx`) est ajouté par Logstash, `context` est le nom passé à `new Logger('...')`, et `level` vaut 20 (debug), 30 (info), 40 (warn) ou 50 (error).
+Every log is a JSON object. The `service` field (`backend` / `nginx`) is added by Logstash, `context` is the name given to `new Logger('...')`, and `level` is 20 (debug), 30 (info), 40 (warn) or 50 (error).
 
-### Trois couches de gestion d'erreur
+### Three layers of error handling
 
-| Couche | Fichier | Ce qu'elle attrape |
+| Layer | File | What it catches |
 |---|---|---|
-| **pino-http** | `config/logger.config.ts` | Chaque requête HTTP : méthode, url, code, durée. 5xx → error, 4xx → warn, sinon info. |
-| **`AllExceptionFilter`** | `config/all-exceptions.filter.ts` | Toute exception levée pendant une requête HTTP. `HttpException` (< 500) → warn `request refused`, le reste → error `unhandled error`. Elle rend ensuite la main à Nest, qui renvoie la réponse au client. |
-| **Logs manuels** | `game.gateway.ts`, `friends.gateway.ts`, `game.service.ts` | Tout ce qui n'est **pas** une requête HTTP : événements WebSocket, bots joués en arrière-plan, timers de déconnexion. |
+| **pino-http** | `config/logger.config.ts` | Every HTTP request: method, URL, status, duration. 5xx → error, 4xx → warn, otherwise info. |
+| **`AllExceptionFilter`** | `config/all-exceptions.filter.ts` | Any exception thrown during an HTTP request. `HttpException` (< 500) → warn `request refused`, anything else → error `unhandled error`. It then hands back to Nest, which sends the response to the client. |
+| **Manual logs** | `game.gateway.ts`, `friends.gateway.ts`, `game.service.ts` | Everything that is **not** an HTTP request: WebSocket events, bots playing in the background, disconnection timers. |
 
-**La règle est la même partout :** une erreur **attendue** (mauvais code d'invitation, coup illégal, JWT expiré) est une `HttpException`, loggée en **warn**. Une erreur **inattendue** (exception JS, base de données en panne, bot bloqué) est un bug, loggée en **error**.
+**The same rule applies everywhere:** an **expected** error (wrong invite code, illegal move, expired JWT) is an `HttpException`, logged as **warn**. An **unexpected** error (JavaScript exception, database down, stuck bot) is a bug, logged as **error**.
 
 ### Conventions
 
-- Les erreurs « métier » se lancent avec les exceptions Nest (`NotFoundException`, `ConflictException`, …), jamais avec `new Error`. C'est ce qui donne le bon code HTTP et le bon niveau de log.
-- Côté WebSocket, l'erreur est renvoyée dans l'ack du client (`{ error: message }`) **et** loggée par `logWsError`.
-- Une promesse lancée sans `await` doit avoir son `.catch(err => this.logger.error(...))`, sinon son erreur est perdue.
-- Pas de `console.log` / `console.error` : ils n'arrivent pas dans Kibana.
-- Ne jamais logger de mot de passe, token ou cookie : `redact` les masque déjà dans les requêtes HTTP (`logger.config.ts`).
+- Business errors are thrown with Nest exceptions (`NotFoundException`, `ConflictException`…), never with `new Error`. That is what gives the right HTTP status and the right log level.
+- On WebSockets, the error is sent back in the client's ack (`{ error: message }`) **and** logged by `logWsError`.
+- A promise started without `await` must have its `.catch(err => this.logger.error(...))`, otherwise its error is lost.
+- No `console.log` / `console.error`: they never reach Kibana.
+- Never log a password, token or cookie: `redact` already hides them in HTTP requests (`logger.config.ts`).
 
-### Retrouver une erreur
+### Finding an error
 
 ```
-service : "backend" and level >= 50     # les bugs
-context : "GameService" and gameId : 3   # l'histoire de la partie 3
-req.id : 21                              # les lignes d'une même requête HTTP
+service : "backend" and level >= 50     # the bugs
+context : "GameService" and gameId : 3   # the story of game 3
+req.id : 21                              # the lines of one HTTP request
 ```
+
+---
+
+## Individual contributions
+
+### elaudrez — Tech Lead
+- Chose the technical stack and set up the project skeleton.
+- Docker Compose, nginx with HTTPS (self-signed certificate), PostgreSQL and the first Prisma schema and migrations.
+- Authentication: sign-up, login, JWT and refresh tokens.
+- The ELK stack: Elasticsearch, Logstash pipeline, Kibana, log retention.
+
+### nadeluge — Project Manager
+- Brought the team together and coordinated the work.
+- The rules engine (board, cards, legal moves, the split 7, captures) and the three bot levels.
+- The game service and WebSockets: games in memory, broadcast, reconnection and grace delay, bots taking over.
+- Profile (avatar upload, password, account deletion), friends and online status, private pages.
+- The design system, the illustrations and most pages; Privacy Policy and Terms of Service.
+- The error-handling layers and structured logs.
+
+### jazema — Product Owner
+- Set the product priorities, drawing on experience from large web projects.
+- The game front end: board display and animations, pawns, spawns and homes, turn feedback, card hints.
+- In-game chat, game log, turn banner and win screen.
+- Bots playing for disconnected players; restructured the front-end folders.
+
+### barmarti — Developer
+- Authentication work and error management on the profile and friends routes.
+- Tests of the overall architecture and of edge cases.
+
+---
+
+## Challenges and trade-offs
+
+### Challenges and how we solved them
+
+| Challenge | Solution |
+|---|---|
+| At first it was hard to tell what came from TypeScript, from Prisma and from NestJS. | We learned step by step with the official documentation, used AI to explain concepts, and kept the rules engine in plain TypeScript, with no framework, so it stayed simple. |
+| Connecting the front end to the back end: the front end was built first, on fake data. | We used AI to quickly wire the WebSockets in a `ws-test` branch so we could test end to end, then took the time to go back over that code by hand, understand it and clean it before merging. |
+| The 7 can be split between several pawns, and the player does not have to use all 7 steps. | A dedicated `split.ts` and partial actions in the engine; the hard bot plans the whole split with a cache. |
+| Games were too long to test (4 pawns × 4 players). | A test mode with one pawn per player (`QUICK_GAME=1`). |
+| Podman prevented Filebeat from reading the containers' logs. | We dropped Filebeat: the backend sends its logs straight to Logstash over TCP and nginx over syslog, which is simpler and more reliable. |
+
+### Trade-offs
+
+| Choice | What we gain | What we give up |
+|---|---|---|
+| ELK only, Prometheus + Grafana dropped (too big for the time we had) | One observability stack that we master | No metrics or alerting |
+| Running games kept in memory | Simple and fast | A game in progress is lost if the backend restarts |
+| Bots replace missing players | You can always play, even alone | — |
+| JWT in httpOnly cookies | Tokens out of reach of JavaScript (XSS) | Refresh has to be handled, including at the WebSocket handshake |
+| One list of legal moves for validation, bots and front end | Rules written once, no cheating, consistent hints | The engine must stay pure and fast enough to be called often |
+
+---
+
+## Resources
+
+### Documentation
+- [Next.js](https://nextjs.org/docs) · [React](https://react.dev) · [Tailwind CSS](https://tailwindcss.com/docs) · [shadcn/ui](https://ui.shadcn.com) · [motion](https://motion.dev)
+- [NestJS](https://docs.nestjs.com) (guards, gateways, exception filters) · [socket.io](https://socket.io/docs/v4/)
+- [Prisma](https://www.prisma.io/docs) · [PostgreSQL](https://www.postgresql.org/docs/)
+- [Elastic Stack](https://www.elastic.co/guide/index.html) · [pino](https://getpino.io) · [nginx](https://nginx.org/en/docs/)
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) · [Introduction to JSON Web Tokens](https://jwt.io/introduction)
+- The rules of Tock (jeu de Toc), as played in France.
+
+### How AI was used
+- **nadeluge** used **Claude Code** and **jazema** used **Windsurf** to understand the technologies (NestJS, Prisma, socket.io, ELK), to write documentation (in particular about WebSockets), to build some front-end components, and to audit the code.
+- **elaudrez** and **barmarti** only used AI in a browser chat, to ask questions, with almost no generated code.
+- The WebSocket connection between the front end and the back end was first wired with AI help in a test branch, then reviewed, rewritten where needed and understood before being merged.
+- **Everything else was done without AI**, including the rules engine, the bots, the architecture and the illustrations.
+- Any AI output we kept was reviewed, tested and is understood by the team member who integrated it.
+
+---
+
+## Known limitations
+
+- A game in progress lives in memory: it is lost if the backend restarts.
+- The certificate is self-signed, so the browser shows a warning on first visit.
+- The interface of the game is partly in French.
