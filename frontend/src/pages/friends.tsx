@@ -63,7 +63,7 @@ export default function Friends() {
           {friendsList.incoming.length > 0 && (
             <FriendsSection title="Requests" count={friendsList.incoming.length}>
               {friendsList.incoming.map((user) => (
-                <FriendRow key={user.id} name={user.name} avatarUrl={user.avatarUrl}>
+                <FriendRow key={user.id} userId={user.id} name={user.name} avatarUrl={user.avatarUrl}>
                   <Button size="lg" onClick={() => runAction(() => acceptFriendRequest(user.id))}>
                     <CheckIcon />
                     Accept
@@ -88,7 +88,7 @@ export default function Friends() {
                 presence = "online";
               }
               return (
-                <FriendRow key={friend.id} name={friend.name} avatarUrl={friend.avatarUrl} presence={presence}>
+                <FriendRow key={friend.id} userId={friend.id} name={friend.name} avatarUrl={friend.avatarUrl} presence={presence}>
                   <Button size="lg" variant="ghost" onClick={() => runAction(() => removeFriend(friend.id))}>
                     Remove
                   </Button>
@@ -100,7 +100,7 @@ export default function Friends() {
           {friendsList.outgoing.length > 0 && (
             <FriendsSection title="Sent" count={friendsList.outgoing.length}>
               {friendsList.outgoing.map((user) => (
-                <FriendRow key={user.id} name={user.name} avatarUrl={user.avatarUrl}>
+                <FriendRow key={user.id} userId={user.id} name={user.name} avatarUrl={user.avatarUrl}>
                   <Button size="lg" variant="ghost" onClick={() => runAction(() => removeFriend(user.id))}>
                     Cancel
                   </Button>

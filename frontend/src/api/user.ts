@@ -22,6 +22,22 @@ export async function getMe(): Promise<Me | null> {
   return response.json();
 }
 
+// Another player's profile: same as Me, without the email
+export type PublicProfile = {
+  userId: number;
+  bio: string | null;
+  avatarUrl: string | null;
+  user: { name: string; createdAt: string };
+  stats: { friendsCount: number; gamesPlayed: number };
+};
+
+export async function getPlayerProfile(userId: number): Promise<PublicProfile> {
+  const response = await fetchWithRefresh(`/api/profile/${userId}`);
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  return response.json();
+}
 
 // Only the fields you pass are changed. Returns the updated profile.
 export async function updateProfile(changes: { name?: string; bio?: string }): Promise<Me> {
