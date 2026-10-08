@@ -3,7 +3,17 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-export function ProfileAccount({ email = "", onChangePassword }: { email?: string; onChangePassword?: () => void }) {
+export function ProfileAccount({
+  email = "",
+  onChangePassword,
+  onLogout,
+  onDeleteAccount,
+}: {
+  email?: string;
+  onChangePassword?: () => void;
+  onLogout?: () => void;
+  onDeleteAccount?: () => void;
+}) {
   return (
     <section className="w-full max-w-md">
       <h2 className="font-heading text-xl font-bold">Account</h2>
@@ -22,6 +32,15 @@ export function ProfileAccount({ email = "", onChangePassword }: { email?: strin
             Change
           </Button>
         </AccountRow>
+      </div>
+
+      <div className="mt-6 flex justify-between gap-2">
+        <Button variant="outline" onClick={onLogout}>
+          Log out
+        </Button>
+        <Button variant="destructive" onClick={onDeleteAccount}>
+          Delete account
+        </Button>
       </div>
     </section>
   );

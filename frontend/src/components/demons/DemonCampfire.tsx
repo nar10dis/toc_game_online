@@ -4,6 +4,8 @@ import type { MotionValue } from "motion/react";
 import { CracklingFire } from "@/components/demons/CracklingFire";
 import { DemonDrawing } from "@/components/demons/DemonDrawing";
 import { SparkleTrail } from "@/components/demons/SparkleTrail";
+import { TEAM_PICTURES } from "@/components/game/PlayerAvatars";
+import { TEAM_COLORS } from "@/lib/game/boardGeometry";
 import { randomBetween } from "@/lib/randomBetween";
 
 const demonImages = [
@@ -12,6 +14,9 @@ const demonImages = [
   "/demons/heart_demon.png",
   "/demons/spade_demon.png",
 ];
+
+// Each demon leaves sparkles in the colour of the team it stands for in the game
+const demonColors = demonImages.map((image) => TEAM_COLORS[TEAM_PICTURES.indexOf(image)]);
 
 const oneTurnInMs = 20000;
 // Half the width of the orbit, in px
@@ -140,6 +145,7 @@ export function DemonCampfire() {
         y: point.y - sparkleHeightAboveFeet + randomBetween(-sparkleMaxDistanceFromPath, sparkleMaxDistanceFromPath),
         zIndex: point.depth < 0 ? behindFireZIndex : inFrontOfFireZIndex,
         opacity: opacityAroundFire(x, point.depth),
+        color: demonColors[index],
       };
     });
   }

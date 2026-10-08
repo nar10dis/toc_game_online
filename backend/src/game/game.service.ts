@@ -1,18 +1,13 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomInt } from 'crypto';
 import * as GameTypes from './game.types';
 import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './engine/state';
 import { chooseAIAction } from './engine/AI/AI';
 
-// Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
-// Un bot "reflechit" entre 1 et 3 secondes avant de jouer.
 const BOT_MIN_DELAY_MS = 1000;
 const BOT_MAX_DELAY_MS = 3000;
-// Temps laisse a un joueur pour revenir (refresh, jwt expire, coupure wifi)
-// avant que l'IA ne prenne sa place.
 const RECONNECT_GRACE_MS = 5000;
-// Messages de chat gardes par partie : les plus vieux sont oublies.
 const MAX_CHAT_HISTORY = 50;
 
 @Injectable()
@@ -22,13 +17,17 @@ export class GameService {
     private games = new Map<number, GameTypes.Game>();
     // userId -> timer qui le declarera deconnecte s'il ne revient pas a temps
     private disconnectTimers = new Map<number, NodeJS.Timeout>();
-    // une seule boucle de bots par partie, sinon deux bots jouent le meme tour
+    //set == number = gameID
     private botLoops = new Set<number>();
+    // userId -> la derniere partie qu'il a creee ou rejointe : c'est la qu'il revient en actualisant
+    private lastGameOfUser = new Map<number, number>();
     // gameId -> derniers messages du chat, renvoyes a un client qui (re)arrive
     private chats = new Map<number, GameTypes.ChatMessage[]>();
     private nextChatMessageId = 1;
     // donne par la gateway -> envoie letat du game a tous les clients de la partie.
     private broadcast?: (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void;
+    //pour commit un log-> this.logger.<niveau>({champs}, 'msg);
+    private readonly logger = new Logger('GameService');
 
     setBroadcaster(fn : (game: GameTypes.Game, event: GameTypes.GameEvent | null) => void) {
         this.broadcast = fn;
@@ -40,15 +39,13 @@ export class GameService {
         this.broadcast?.(game, event);
     }
 
-    // La partie la plus recente du joueur (pour la resynchro d'un client).
+    // La derniere partie creee ou rejointe par le joueur (pour la resynchro d'un client).
     findGameOfUser(userId: number): GameTypes.Game | null {
-        let found: GameTypes.Game | null = null;
-
-        for (const game of this.games.values()) {
-            if (game.players.some(p => p.userId === userId))
-                found = game;
-        }
-        return found;
+        const gameId = this.lastGameOfUser.get(userId);
+        if (gameId === undefined)
+            return null;
+        // undefined si la partie a ete abandonnee entre temps
+        return this.games.get(gameId) ?? null;
     }
 
     private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -91,6 +88,7 @@ export class GameService {
         game = addPlayer(game, userId, pseudo);
 
         this.commit(game);
+        this.lastGameOfUser.set(userId, game.id);
 
         return { gameId: game.id, inviteCode };
     }
@@ -106,8 +104,10 @@ export class GameService {
 
         const alreadyIn = game.players.some(p => p.userId === userId);
         // on ne renvoie jamais la Game entiere : l'etat passe par le websocket (viewFor)
-        if (alreadyIn)
+        if (alreadyIn) {
+            this.lastGameOfUser.set(userId, game.id);
             return { gameId: game.id, inviteCode };
+        }
 
         const seat = game.players.length as GameTypes.Seat;
 
@@ -124,6 +124,7 @@ export class GameService {
 
         //commit le nouvel etat dans la map.
         this.commit(game);
+        this.lastGameOfUser.set(userId, game.id);
 
         return { gameId: game.id, inviteCode };
     }
@@ -148,8 +149,7 @@ export class GameService {
         });
 
         // le siege 0 est toujours un humain (l'hote), mais au cas ou.
-        void this.runBots(gameId);
-
+        this.startBots(gameId);
         return { gameId };
     }
 
@@ -196,13 +196,17 @@ export class GameService {
 
         this.commit(out.game, out.event);
         // pas de await : on repond tout de suite, les bots jouent en fond
-        void this.runBots(gameId);
+        this.startBots(gameId);
     }
 
-    // Fait jouer les bots (et l'IA qui remplace un deconnecte) tant que c'est a eux, un commit par coup.
-    // La partie est relue dans la Map a chaque tour : pendant la pause, un joueur
-    // a pu revenir, partir, ou la partie a pu etre abandonnee.
+    // runBots tourne en fond, hors requete HTTP : sans ce catch son erreur serait perdue.
+    private startBots(gameId: number) {
+        this.runBots(gameId).catch(err => this.logger.error({ err, gameId }, 'runBots crashed'));
+    }
+
     private async runBots(gameId: number) {
+
+        //verrou pour pas avoir deux bots de la meme game qui tournent.
         if (this.botLoops.has(gameId))
             return;
         this.botLoops.add(gameId);
@@ -216,8 +220,11 @@ export class GameService {
                 const seat = game.currentSeat;
                 const action = chooseAIAction(game, seat);
                 const out = action && playTurn(game, seat, action);
-                if (!out)
+                // l'IA n'a rien trouve ou le moteur refuse son coup : la partie reste bloquee
+                if (!out) {
+                    this.logger.error({ gameId, seat, actionType: action?.type ?? null }, 'bot could not play');
                     break;
+                }
                 this.commit(out.game, out.event);
             }
         }
@@ -299,6 +306,8 @@ export class GameService {
             const player = game.players.find(p => p.userId === userId);
             if (!player || player.isConnected === isConnected)
                 continue;
+            this.logger.log({ gameId: game.id, userId, seat: player.seat },
+                isConnected ? 'player reconnected' : 'player disconnected, AI takes over');
 
             const updated: GameTypes.Game = {
                 ...game,
@@ -312,12 +321,13 @@ export class GameService {
             this.commit(updated);
             // si c'etait son tour, l'IA le joue pour lui
             if (!isConnected)
-                void this.runBots(updated.id);
+                this.startBots(updated.id);
         }
     }
 
     // Partie terminee sans gagnant (winnerSeat null) : tous les humains sont partis.
     private async abandonGame(gameId: number) {
+        this.logger.log({ gameId }, 'game abandoned: no human left');
         this.games.delete(gameId);
         this.chats.delete(gameId);
         try {
@@ -327,7 +337,7 @@ export class GameService {
             });
         }
         catch (error) {
-            console.error(`abandonGame ${gameId}:`, error);
+            this.logger.error({err: error, gameId}, 'abandonGame: DB update failed');
         }
     }
 }

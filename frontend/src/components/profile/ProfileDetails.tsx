@@ -10,10 +10,14 @@ export function ProfileDetails({
   me,
   onEdit,
   onChangePassword,
+  onLogout,
+  onDeleteAccount,
 }: {
   me: Me;
   onEdit?: () => void;
   onChangePassword?: () => void;
+  onLogout?: () => void;
+  onDeleteAccount?: () => void;
 }) {
   const memberSince = new Date(me.user.createdAt).toLocaleDateString("en-US", {
     month: "long",
@@ -49,7 +53,12 @@ export function ProfileDetails({
 
       <Separator className="max-w-md" />
 
-      <ProfileAccount email={me.user.email} onChangePassword={onChangePassword} />
+      <ProfileAccount
+        email={me.user.email}
+        onChangePassword={onChangePassword}
+        onLogout={onLogout}
+        onDeleteAccount={onDeleteAccount}
+      />
     </>
   );
 }
@@ -65,7 +74,19 @@ function ProfileBio({ bio, onEdit }: { bio: string | null; onEdit?: () => void }
   }
 
   return (
-    <blockquote className="relative max-w-md px-8 text-center font-body text-lg whitespace-pre-line">
+    <div className="flex flex-col items-center gap-6">
+      <BioQuote bio={bio} />
+      <Button variant="ghost" size="sm" onClick={onEdit} className="gap-1.5 rounded-full text-muted-foreground">
+        <PencilIcon />
+        Edit bio
+      </Button>
+    </div>
+  );
+}
+
+export function BioQuote({ bio = "" }: { bio?: string }) {
+  return (
+    <blockquote className="relative max-w-md px-8 text-center font-body text-lg whitespace-pre-line wrap-anywhere">
       <span aria-hidden className="absolute -top-3 left-0 font-heading text-5xl leading-none text-primary/40">
         &ldquo;
       </span>
@@ -77,7 +98,7 @@ function ProfileBio({ bio, onEdit }: { bio: string | null; onEdit?: () => void }
   );
 }
 
-function ProfileStat({ label, value }: { label: string; value: number }) {
+export function ProfileStat({ label, value }: { label: string; value: number }) {
   return (
     <WornFrame className="min-w-32 text-center md:min-w-36">
       <div className="flex flex-col items-center">

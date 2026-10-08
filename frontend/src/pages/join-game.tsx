@@ -1,10 +1,13 @@
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 
 import { joinGame } from "@/api/game";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { Title, Subtitle } from "@/components/layout/Title";
-import { Button } from "@/components/ui/button";
+import { Title } from "@/components/layout/Title";
+import { WornFrame } from "@/components/layout/WornFrame";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 export default function JoinGame() {
@@ -30,18 +33,40 @@ export default function JoinGame() {
 
   return (
     <PageLayout>
-      <div className="flex flex-col items-center gap-6 text-center">
-        <div>
-          <Title>Join game</Title>
-          <Subtitle>Type the code the host gave you.</Subtitle>
+      <div className="flex flex-col items-center gap-8">
+        <Title>Join game</Title>
+        <div className="w-96 max-w-full">
+          <WornFrame className="md:px-8 md:py-8">
+            <form onSubmit={handleSubmit}>
+              <FieldGroup>
+                <p className="text-center text-sm text-muted-foreground">
+                  Type the code the host gave you.
+                </p>
+                <Field>
+                  <FieldLabel htmlFor="inviteCode">Invite code</FieldLabel>
+                  <Input
+                    id="inviteCode"
+                    name="inviteCode"
+                    placeholder="ABCD2345"
+                    maxLength={8}
+                    required
+                    autoComplete="off"
+                    className="h-12 text-center font-heading text-xl tracking-widest uppercase md:text-xl"
+                  />
+                </Field>
+                <Field>
+                  {errorMessage && <FieldError>{errorMessage}</FieldError>}
+                  <Button type="submit" disabled={isJoining}>
+                    {isJoining ? "Joining..." : "Join"}
+                  </Button>
+                  <Link href="/menu" className={buttonVariants({ variant: "outline" })}>
+                    Back to menu
+                  </Link>
+                </Field>
+              </FieldGroup>
+            </form>
+          </WornFrame>
         </div>
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input name="inviteCode" placeholder="ABCD2345" maxLength={8} required />
-          <Button type="submit" disabled={isJoining}>
-            {isJoining ? "Joining..." : "Join"}
-          </Button>
-        </form>
-        {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
       </div>
     </PageLayout>
   );

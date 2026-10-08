@@ -7,9 +7,15 @@ import { ProfileModule } from './profile/profile.module';
 import { GameModule } from './game/game.module';
 import { LoggerConfig } from './config/logger.config';
 import { FriendsModule } from './friends/friends.module';
+import { ChatModule } from './chat/chat.module';
+import { APP_FILTER } from '@nestjs/core';
+import { AllExceptionFilter } from './config/all-exceptions.filter';
+
 @Module({
-  imports: [PrismaModule, AuthModule, ProfileModule, GameModule, FriendsModule, LoggerConfig],
+  imports: [PrismaModule, AuthModule, ProfileModule, GameModule, FriendsModule, ChatModule, LoggerConfig],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,
+    {provide: APP_FILTER, useClass: AllExceptionFilter},
+  ],
 })
 export class AppModule {};

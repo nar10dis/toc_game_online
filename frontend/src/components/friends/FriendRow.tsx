@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function FriendRow({
+  userId,
   name = "",
   avatarUrl = null,
   presence = "hidden",
   children,
 }: {
+  userId?: number;
   name?: string;
   avatarUrl?: string | null;
   presence?: "online" | "offline" | "hidden";
@@ -25,8 +28,13 @@ export function FriendRow({
         {presence !== "hidden" && <PresenceDot isOnline={presence === "online"} />}
       </div>
 
-      <div className="flex flex-1 flex-col">
-        <span className="font-body text-lg">{name}</span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {userId === undefined && <span className="truncate font-body text-lg">{name}</span>}
+        {userId !== undefined && (
+          <Link href={`/players/${userId}`} className="truncate font-body text-lg hover:underline">
+            {name}
+          </Link>
+        )}
         {presence === "online" && <span className="text-sm text-muted-foreground">Online</span>}
         {presence === "offline" && <span className="text-sm text-muted-foreground">Offline</span>}
       </div>

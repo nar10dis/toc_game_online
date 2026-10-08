@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Get, Post, Body, Patch, Delete, Res, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, UseGuards, Get, Post, Body, Patch, Delete, Res, UseInterceptors, UploadedFile, Param, ParseIntPipe } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import type { Response } from 'express';
@@ -17,6 +17,13 @@ export class ProfileController {
   @Get()
   findOne(@CurrentUser() user: { sub: number }) {
     return this.profileService.findOne(user.sub);
+  }
+
+  // Profil d'un autre joueur, sans son email
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  findPublic(@Param('id', ParseIntPipe) id: number) {
+    return this.profileService.findPublic(id);
   }
 
   // @UseGuards(AuthGuard)
@@ -51,8 +58,12 @@ export class ProfileController {
     return this.profileService.removeAvatar(user.sub);
   }
 
-  // @Delete(':userId')
-  // remove(@Param('userId') userId: string) {
-  //   return this.profileService.remove(+userId);
-  // }
+  @UseGuards(AuthGuard)
+  @Delete()
+  async remove(@CurrentUser() user: { sub: number }, @Body() body: { password?: string }, @Res({ passthrough: true }) res: Response) {
+    await this.profileService.remove(user.sub, body?.password);
+    res.clearCookie('jwt');
+    res.clearCookie('refresh_token');
+    return { message: 'Account deleted' };
+  }
 }

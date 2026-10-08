@@ -1,16 +1,18 @@
 "use client";
 
-import { FlaskConicalIcon, HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
+import { HelpCircleIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
 
 import { createGame } from "@/api/game";
 
+import { GlobalChat } from "@/components/chat/GlobalChat";
 import { DemonCampfire } from "@/components/demons/DemonCampfire";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getSession } from "@/api/auth";
 import { useUsername } from "@/api/user";
 
 // h-auto and whitespace-normal undo the single-line sizing the Button ships with.
@@ -24,6 +26,11 @@ export default function Menu() {
   const [isCreating, setIsCreating] = useState(false);
 
   async function handleCreate() {
+    // same as the other private pages: no session, back to the login
+    if (!(await getSession())) {
+      router.push("/login");
+      return;
+    }
     setIsCreating(true);
     setCreateError(null);
     try {
@@ -45,7 +52,7 @@ export default function Menu() {
     <PageLayout>
       <div className="w-full max-w-6xl">
         <div className="text-center">
-          <p className="font-heading text-3xl font-bold md:text-4xl">
+          <p className="font-heading text-3xl font-bold wrap-anywhere md:text-4xl">
             {welcomeText}
           </p>
           <p className="mt-1 font-body text-base text-muted-foreground md:text-lg">
@@ -94,25 +101,17 @@ export default function Menu() {
 
         <Separator className="my-6" />
 
-        {/* side by side, so the whole menu fits on one screen */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Button
-            variant="outline"
-            onClick={() => router.push("/rules")}
-            className="h-auto w-full gap-2 rounded-2xl p-4 text-lg"
-          >
-            <HelpCircleIcon className="size-5" />
-            Some question about the rules ?
-          </Button>
+        <Button
+          variant="outline"
+          onClick={() => router.push("/rules")}
+          className="h-auto w-full gap-2 rounded-2xl p-4 text-lg"
+        >
+          <HelpCircleIcon className="size-5" />
+          Some question about the rules ?
+        </Button>
 
-          {/* Dev tool: jumps straight to the board, remove before release */}
-          <Button
-            onClick={() => router.push("/play")}
-            className="h-auto w-full gap-2 rounded-2xl bg-fuchsia-600 p-4 text-lg text-white hover:bg-fuchsia-700"
-          >
-            <FlaskConicalIcon className="size-5" />
-            Test game
-          </Button>
+        <div className="mt-6">
+          <GlobalChat />
         </div>
       </div>
     </PageLayout>

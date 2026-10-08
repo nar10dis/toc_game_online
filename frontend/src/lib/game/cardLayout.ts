@@ -29,6 +29,9 @@ export type CardTransform = {
 
 export const CARD_WIDTH_IN_PIXELS = 125;
 export const CARD_HEIGHT_IN_PIXELS = 200;
+/** Real size of the files in public/cards: next/image needs it to keep their shape. */
+export const CARD_IMAGE_WIDTH = 800;
+export const CARD_IMAGE_HEIGHT = 1080;
 export const MAX_CARDS_IN_HAND = 5;
 /** How far a playable card lifts when the pointer hovers it. */
 export const HOVER_LIFT_IN_PIXELS = 18;

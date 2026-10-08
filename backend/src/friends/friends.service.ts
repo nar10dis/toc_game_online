@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PresenceService } from './presence.service';
@@ -37,6 +37,7 @@ function toFriendUser(user: SelectedUser): FriendUser {
 @Injectable()
 export class FriendsService {
     private notify: (userIds: number[]) => void = () => {};
+    private readonly logger = new Logger('FriendsService');
 
     constructor(private readonly prisma: PrismaService, private readonly presence: PresenceService) {}
 
@@ -84,6 +85,7 @@ export class FriendsService {
             catch (error) {
                 if (!isRetryable(error) || attempt === MAX_ATTEMPTS)
                     throw error;
+                this.logger.debug({ userId, targetId: target.id, attempt }, 'friend request retried after conflict');
             }
         }
     }

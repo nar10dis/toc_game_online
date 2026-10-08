@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
     WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect,
@@ -12,6 +13,8 @@ type SocketData = { userId?: number };
 @WebSocketGateway({ path: '/ws/socket.io', namespace: 'friends' })
 export class FriendsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Namespace;
+    // les WebSockets ne passent ni par pino-http ni par AllExceptionFilter : on logge ici
+    private readonly logger = new Logger('FriendsGateway');
 
     constructor(
         private friendsService: FriendsService,
@@ -33,13 +36,14 @@ export class FriendsGateway implements OnGatewayInit, OnGatewayConnection, OnGat
             userId = this.jwtService.verify<{ sub: number }>(token ?? '').sub;
         }
         catch {
+            this.logger.warn({ socketId: client.id, hasToken: token !== null }, 'ws connection refused: invalid jwt');
             client.disconnect();
             return;
         }
         (client.data as SocketData).userId = userId;
         void client.join(`user-${userId}`);
         if (this.presence.connect(userId))
-            await this.friendsService.notifyFriendsOf(userId);
+            await this.notifyFriends(userId);
     }
 
     async handleDisconnect(client: Socket) {
@@ -47,6 +51,16 @@ export class FriendsGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         if (userId === undefined)
             return;
         if (this.presence.disconnect(userId))
+            await this.notifyFriends(userId);
+    }
+
+    // Lit la base : si elle plante, l'erreur ne remonte nulle part, donc on la logge.
+    private async notifyFriends(userId: number) {
+        try {
             await this.friendsService.notifyFriendsOf(userId);
+        }
+        catch (err) {
+            this.logger.error({ err, userId }, 'notifyFriendsOf failed');
+        }
     }
 }
