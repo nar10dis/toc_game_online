@@ -19,6 +19,19 @@ function isSameHash(hashA: string, hashB: string): boolean {
     return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB);
 }
 
+// Volontairement simple : quelque chose@domaine.extension, sans espace
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function checkPassword(password: unknown): string
+{
+    if (typeof password !== 'string' || password.length < 8)
+        throw new BadRequestException('Password must be at least 8 characters long');
+    // bcrypt ignore tout ce qui depasse 72 octets
+    if (Buffer.byteLength(password) > 72)
+        throw new BadRequestException('Password is too long');
+    return password;
+}
+
 @Injectable()
 export class AuthService {
     constructor(private prisma: PrismaService, private jwtService: JwtService) {}
@@ -28,11 +41,16 @@ export class AuthService {
         // Same rule as when the pseudo is changed on the profile
         if (typeof data.name !== 'string' || !NAME_PATTERN.test(data.name))
             throw new BadRequestException('Pseudo must be 3 to 20 letters, digits, _ or -');
+        if (typeof data.email !== 'string' || data.email.length > 254 || !EMAIL_PATTERN.test(data.email))
+            throw new BadRequestException('Invalid email');
+        const password = checkPassword(data.password);
         const salt = await bcrypt.genSalt(10);
-        const hashPassword = await bcrypt.hash(data.password, salt);
+        const hashPassword = await bcrypt.hash(password, salt);
         return this.prisma.user.create({
             data: {
-                ...data,
+                // Champ par champ : un champ en trop dans le body ne doit pas finir en base
+                email: data.email,
+                name: data.name,
                 password: hashPassword,
                 profile: {
                     create: {}
@@ -47,6 +65,9 @@ export class AuthService {
     }
     async login(data: {email: string; password: string;})
     {
+        // Meme 401 qu'un mauvais mot de passe, le front affiche deja ce message
+        if (typeof data?.email !== 'string' || typeof data?.password !== 'string')
+            throw new UnauthorizedException();
         const user = await this.prisma.user.findUnique({
             where: {
                 email: data.email,
@@ -144,11 +165,7 @@ export class AuthService {
     {
         if (typeof currentPassword !== 'string' || typeof newPassword !== 'string')
             throw new BadRequestException('Current and new password are required');
-        if (newPassword.length < 8)
-            throw new BadRequestException('New password must be at least 8 characters long');
-        // bcrypt ignore tout ce qui depasse 72 octets
-        if (Buffer.byteLength(newPassword) > 72)
-            throw new BadRequestException('New password is too long');
+        checkPassword(newPassword);
 
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user)

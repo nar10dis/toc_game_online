@@ -34,7 +34,7 @@ export function RegisterForm({
     const email = String(form.get("email"))
     const password = String(form.get("password"))
 
-    // The backend doesn't check the length yet, so we do it here
+    // Same rule as the backend, checked here to answer without a request
     if (password.length < 8) {
       setError("Password must be at least 8 characters long.")
       return

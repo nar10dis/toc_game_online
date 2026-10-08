@@ -9,9 +9,7 @@ services:
     container_name: backend
     env_file:
       - ./backend/.env
-    ports:
-      - "3001:3001"
-      - "51212:51212"
+    # no published ports: nginx reaches backend:3001 through docker-network
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -23,8 +21,7 @@ services:
     container_name: frontend
     env_file:
       - .env
-    ports:
-      - "3002:3002"
+    # no published ports: nginx reaches frontend:3000 through docker-network
     volumes:
       - ./frontend:/app
       - /app/node_modules
