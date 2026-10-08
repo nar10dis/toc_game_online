@@ -28,8 +28,7 @@ export const PAWNS_PER_TEAM = SPAWN_CELLS;
 
 /**
  * Team colours, in seat order — see `armOfSeat` for the arm each seat owns.
- * The values live in globals.css (--team-0 to --team-3) so they follow the
- * light and dark themes.
+ * The values live in globals.css (--team-0 to --team-3).
  */
 export const TEAM_COLORS = [
   "var(--team-0)", // seat 0, drawn on the left arm

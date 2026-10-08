@@ -1,3 +1,4 @@
+import { HttpException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
     WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayInit,
@@ -13,6 +14,8 @@ import { readCookie } from '../auth/ws-auth';
 @WebSocketGateway({ path: '/ws/socket.io' })
 export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Server;
+    // les WebSockets ne passent ni par pino-http ni par AllExceptionFilter : on logge ici
+    private readonly logger = new Logger('GameGateway');
 
     constructor(private gameService: GameService, private jwtService: JwtService) {}
 
@@ -38,6 +41,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             client.join(`user-${payload.sub}`);
         }
         catch {
+            this.logger.warn({ socketId: client.id, hasToken: token !== null }, 'ws connection refused: invalid jwt');
             client.disconnect();
             return;
         }
@@ -77,6 +81,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             return { ok: true };
         }
         catch (error) {
+            this.logWsError('action', error, { gameId: body?.gameId, userId: client.data.userId, actionType: body?.action?.type });
             return { error: (error as Error).message };
         }
     }
@@ -93,8 +98,17 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             return { ok: true };
         }
         catch (error) {
+            this.logWsError('chat', error, { gameId: body?.gameId, userId: client.data.userId });
             return { error: (error as Error).message };
         }
+    }
+
+    // Meme regle que AllExceptionFilter : HttpException = coup refuse (warn), le reste = bug (error).
+    private logWsError(event: string, error: unknown, details: object) {
+        if (error instanceof HttpException)
+            this.logger.warn({ ...details, event, status: error.getStatus(), err: error }, 'ws event refused');
+        else
+            this.logger.error({ ...details, event, err: error }, 'ws event crashed');
     }
 
     // L'historique du chat, pour un client qui arrive en cours de partie.

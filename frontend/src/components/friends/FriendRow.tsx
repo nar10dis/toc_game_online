@@ -25,8 +25,8 @@ export function FriendRow({
         {presence !== "hidden" && <PresenceDot isOnline={presence === "online"} />}
       </div>
 
-      <div className="flex flex-1 flex-col">
-        <span className="font-body text-lg">{name}</span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate font-body text-lg">{name}</span>
         {presence === "online" && <span className="text-sm text-muted-foreground">Online</span>}
         {presence === "offline" && <span className="text-sm text-muted-foreground">Offline</span>}
       </div>

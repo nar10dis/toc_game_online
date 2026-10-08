@@ -45,10 +45,13 @@ export function addPlayer(game: Game, userId: number, pseudo: string): Game {
 function createPawns(players: Player[]) : Pawn[] {
 
 	const pawns: Pawn[] = [];
+	//partie rapide pour la correction : 1 pion par joueur.
+	//L'id reste en seat * PAWN_BY_PLAYER, le front en deduit l'equipe.
+	const pawnCount = process.env.QUICK_GAME === '1' ? 1 : PAWN_BY_PLAYER;
 
 	for (const player of players)
 	{
-		for (let i = 0 ; i < PAWN_BY_PLAYER; i++)
+		for (let i = 0 ; i < pawnCount; i++)
 		{
 			pawns.push({id: player.seat * PAWN_BY_PLAYER + i,
 						playerSeat: player.seat,

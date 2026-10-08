@@ -8,12 +8,16 @@ import { randomBetween } from "@/lib/randomBetween";
 const newSparkleEveryMs = 300;
 const sparkleLifetimeMs = 1600;
 
-/** Where a new sparkle appears, in px from the trail container. `zIndex` and `opacity` let it go behind things. */
+/**
+ * Where a new sparkle appears, in px from the trail container. `zIndex` and `opacity` let it go behind things.
+ * `color` is any CSS colour, the ink colour by default.
+ */
 export type SparkleSpot = {
   x: number;
   y: number;
   zIndex?: number;
   opacity?: number;
+  color?: string;
 };
 
 type SparkleData = SparkleSpot & {
@@ -63,7 +67,13 @@ export function SparkleTrail({ getSpots }: { getSpots: () => SparkleSpot[] }) {
         <div
           key={sparkle.id}
           className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: sparkle.x, top: sparkle.y, zIndex: sparkle.zIndex, opacity: sparkle.opacity }}
+          style={{
+            left: sparkle.x,
+            top: sparkle.y,
+            zIndex: sparkle.zIndex,
+            opacity: sparkle.opacity,
+            color: sparkle.color,
+          }}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0, rotate: 0 }}

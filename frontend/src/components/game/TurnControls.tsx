@@ -14,12 +14,12 @@ export function TurnControls({ game, turnChoice }: TurnControlsProps) {
   const isMyTurn = game.currentSeat === game.mySeat;
 
   if (game.phase === "finished" && game.winner !== null) {
-    return <h2 className="text-2xl font-bold">{game.players[game.winner].pseudo} a gagné !</h2>;
+    return <h2 className="text-2xl font-bold wrap-anywhere">{game.players[game.winner].pseudo} a gagné !</h2>;
   }
 
   // the demon of whoever plays, in its colour, like the one pulsing on the board
   const name = (
-    <span className="font-bold" style={{ color: TEAM_COLORS[game.currentSeat] }}>
+    <span className="font-bold wrap-anywhere" style={{ color: TEAM_COLORS[game.currentSeat] }}>
       {currentPlayer.pseudo}
     </span>
   );

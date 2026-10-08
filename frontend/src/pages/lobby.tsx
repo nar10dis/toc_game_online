@@ -90,7 +90,7 @@ export default function Lobby() {
               <li key={seat} className="flex flex-col items-center gap-2">
                 <SeatBadge seat={seat} isTaken={isTaken} className="size-28 md:size-32" />
                 <span
-                  className="font-heading text-lg font-bold"
+                  className="max-w-full text-center font-heading text-lg font-bold wrap-anywhere"
                   style={{ color: isTaken ? TEAM_COLORS[seat] : undefined }}
                 >
                   {name}

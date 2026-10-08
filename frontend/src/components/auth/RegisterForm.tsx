@@ -79,8 +79,12 @@ export function RegisterForm({
             type="text"
             placeholder="Xxx_Melechon77"
             required
+            maxLength={20}
+            pattern="[a-zA-Z0-9_\-]{3,20}"
+            title="3 to 20 letters, digits, _ or -"
             className="bg-background"
           />
+          <FieldDescription>3 to 20 letters, digits, _ or -</FieldDescription>
         </Field>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>

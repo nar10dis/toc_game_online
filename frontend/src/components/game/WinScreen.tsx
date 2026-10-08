@@ -92,12 +92,12 @@ export function WinScreen({ winnerSeat, winnerName, isMe }: WinScreenProps) {
       >
         <SeatBadge seat={winnerSeat} isTaken className="size-40 md:size-48" />
         <p
-          className="font-heading text-5xl font-bold md:text-6xl"
+          className="max-w-full font-heading text-5xl font-bold wrap-anywhere md:text-6xl"
           style={{ color: TEAM_COLORS[winnerSeat] }}
         >
           {isMe ? "Victoire !" : `${winnerName} a gagné !`}
         </p>
-        {isMe && <p className="font-heading text-2xl md:text-3xl">Bravo, {winnerName} !</p>}
+        {isMe && <p className="max-w-full font-heading text-2xl wrap-anywhere md:text-3xl">Bravo, {winnerName} !</p>}
         <Button
           onClick={() => router.push("/menu")}
           className="mt-4 h-auto rounded-2xl px-8 py-3 text-lg"
