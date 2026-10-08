@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 
 import { createGame } from "@/api/game";
 
+import { GlobalChat } from "@/components/chat/GlobalChat";
 import { DemonCampfire } from "@/components/demons/DemonCampfire";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
@@ -108,6 +109,10 @@ export default function Menu() {
           <HelpCircleIcon className="size-5" />
           Some question about the rules ?
         </Button>
+
+        <div className="mt-6">
+          <GlobalChat />
+        </div>
       </div>
     </PageLayout>
   );
