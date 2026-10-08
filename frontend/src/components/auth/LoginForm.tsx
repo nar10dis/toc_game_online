@@ -4,7 +4,7 @@ import { useRouter } from "next/router"
 
 import { cn } from "@/lib/utils"
 
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldError,
@@ -78,10 +78,6 @@ export function LoginForm({
           <Button type="submit" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </Button>
-          {/* TODO: remove once the login works, it lets us reach the game without an account */}
-          <Link href="/menu" className={buttonVariants({ variant: "outline" })}>
-            Test game
-          </Link>
         </Field>
         <Field>
           <Link

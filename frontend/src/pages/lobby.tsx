@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
-import { setAILevel, startGame } from "@/api/game";
+import { leaveGame, setAILevel, startGame } from "@/api/game";
 import { AI_LEVELS, type AILevel } from "@/lib/game/gameTypes";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
@@ -15,6 +15,7 @@ export default function Lobby() {
   const router = useRouter();
   const { game, hasNoGame } = useGame();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   // everybody is sent to the board as soon as the host starts
   useEffect(() => {
@@ -44,6 +45,20 @@ export default function Lobby() {
     }
   }
 
+  // frees our seat: if we were the host, the next player takes over
+  async function handleLeave() {
+    if (!window.confirm("Are you sure you want to quit your current game ?")) return;
+    setIsLeaving(true);
+    setErrorMessage(null);
+    try {
+      await leaveGame();
+      router.push("/menu");
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+      setIsLeaving(false);
+    }
+  }
+
   if (hasNoGame) {
     return (
       <PageLayout>
@@ -59,7 +74,7 @@ export default function Lobby() {
     );
   }
 
-  // the host is always the one who created the table, on seat 0
+  // the host is always on seat 0: the creator, or the next one if they left
   const isHost = game.mySeat === 0;
   const seats = Array.from({ length: TEAMS_NUMBER }, (_, seat) => seat);
 
@@ -123,6 +138,9 @@ export default function Lobby() {
 
         {isHost && <Button onClick={handleStart}>Start the game</Button>}
         {!isHost && <Subtitle>Waiting for the host to start...</Subtitle>}
+        <Button variant="outline" onClick={handleLeave} disabled={isLeaving}>
+          {isLeaving ? "Leaving..." : "Quit game"}
+        </Button>
         {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
       </div>
     </PageLayout>

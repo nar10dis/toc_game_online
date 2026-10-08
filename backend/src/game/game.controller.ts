@@ -13,6 +13,19 @@ export class GameController {
         return this.gameService.createGame(user.sub, user.username)
     }
 
+    // La partie pas finie du user, pour le menu (reprendre / quitter).
+    @UseGuards(AuthGuard)
+    @Get('current')
+    getCurrentGame(@CurrentUser() user: JwtPayload) {
+        return this.gameService.getCurrentGame(user.sub);
+    }
+
+    @UseGuards(AuthGuard)
+    @Post('leave')
+    leaveGame(@CurrentUser() user: JwtPayload) {
+        return this.gameService.leaveGame(user.sub);
+    }
+
     @UseGuards(AuthGuard)
     @Post('join/:inviteCode')
     joinGame(@Param('inviteCode') inviteCode: string ,@CurrentUser() user: JwtPayload) {
