@@ -21,6 +21,8 @@ export class GameService {
     private botLoops = new Set<number>();
     // userId -> la derniere partie qu'il a creee ou rejointe : c'est la qu'il revient en actualisant
     private lastGameOfUser = new Map<number, number>();
+    // userId dont un createGame est en cours : bloque le double clic pendant l'await Prisma
+    private pendingCreates = new Set<number>();
     // gameId -> derniers messages du chat, renvoyes a un client qui (re)arrive
     private chats = new Map<number, GameTypes.ChatMessage[]>();
     private nextChatMessageId = 1;
@@ -48,6 +50,22 @@ export class GameService {
         return this.games.get(gameId) ?? null;
     }
 
+    // La partie pas finie du joueur, null s'il n'en a pas : une seule a la fois.
+    findActiveGameOfUser(userId: number): GameTypes.Game | null {
+        const game = this.findGameOfUser(userId);
+        if (!game || game.phase === 'finished')
+            return null;
+        return game;
+    }
+
+    // Pour le menu : reprendre ou quitter.
+    getCurrentGame(userId: number) {
+        const game = this.findActiveGameOfUser(userId);
+        if (!game)
+            return { game: null };
+        return { game: { gameId: game.id, phase: game.phase } };
+    }
+
     private readonly CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
     private generateInviteCode(): string {
@@ -65,6 +83,20 @@ export class GameService {
     }
 
     async createGame(userId: number, pseudo: string)
+    {
+        if (this.findActiveGameOfUser(userId) || this.pendingCreates.has(userId))
+            throw new ConflictException('You are already in a game');
+        // pris AVANT le premier await, comme le siege dans joinGame
+        this.pendingCreates.add(userId);
+        try {
+            return await this.createGameInDb(userId, pseudo);
+        }
+        finally {
+            this.pendingCreates.delete(userId);
+        }
+    }
+
+    private async createGameInDb(userId: number, pseudo: string)
     {
         const inviteCode = this.generateInviteCode();
 
@@ -103,6 +135,9 @@ export class GameService {
             throw new ConflictException('Room is full, sorry');
 
         const alreadyIn = game.players.some(p => p.userId === userId);
+        const current = this.findActiveGameOfUser(userId);
+        if ((current && current.id !== game.id) || this.pendingCreates.has(userId))
+            throw new ConflictException('You are already in a game');
         // on ne renvoie jamais la Game entiere : l'etat passe par le websocket (viewFor)
         if (alreadyIn) {
             this.lastGameOfUser.set(userId, game.id);
@@ -126,6 +161,53 @@ export class GameService {
         });
 
         return { gameId: game.id, inviteCode };
+    }
+
+    // Salle d'attente : on libere le siege, la salle vit tant qu'il reste quelqu'un.
+    // En partie : l'IA prend sa place pour de bon (userId null = vrai bot, meme s'il revient).
+    async leaveGame(userId: number) {
+        const game = this.findActiveGameOfUser(userId);
+        if (!game)
+            throw new NotFoundException('You are not in any game');
+        this.lastGameOfUser.delete(userId);
+
+        if (game.phase === 'waiting') {
+            // les sieges restent 0..n-1 : le suivant devient l'hote s'il le faut
+            const players = game.players
+                .filter(p => p.userId !== userId)
+                .map((p, i) => ({ ...p, seat: i as GameTypes.Seat }));
+            if (players.length === 0) {
+                await this.abandonGame(game.id);
+                return { ok: true };
+            }
+            this.commit({ ...game, players });
+            this.logger.log({ gameId: game.id, userId }, 'player left the waiting room');
+            try {
+                await this.prisma.gamePlayer.deleteMany({ where: { gameId: game.id, userId } });
+                for (const p of players)
+                    await this.prisma.gamePlayer.updateMany({
+                        where: { gameId: game.id, userId: p.userId! },
+                        data: { seat: p.seat },
+                    });
+            }
+            catch (error) {
+                this.logger.error({ err: error, gameId: game.id, userId }, 'leaveGame: DB update failed');
+            }
+            return { ok: true };
+        }
+
+        const updated: GameTypes.Game = {
+            ...game,
+            players: game.players.map(p => p.userId === userId ? { ...p, userId: null, isConnected: true } : p),
+        };
+        this.logger.log({ gameId: game.id, userId }, 'player left the game, AI takes over');
+        if (!updated.players.some(p => !GameTypes.isBotControlled(p))) {
+            await this.abandonGame(updated.id);
+            return { ok: true };
+        }
+        this.commit(updated);
+        this.startBots(updated.id);
+        return { ok: true };
     }
 
     async startGame(gameId: number, requesterUserId: number) {
