@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/router";
 
-import { getMe } from "@/api/user";
+import { getSession } from "@/api/auth";
 
 // Every other page needs a logged in user, so a new page is protected by default
 const PUBLIC_PAGES = ["/login", "/register", "/rules", "/privacy", "/terms", "/404", "/_error"];
@@ -18,11 +18,11 @@ export function RequireLogin({ children }: { children: ReactNode }) {
       return;
     }
     let isCancelled = false;
-    getMe().then((me) => {
+    getSession().then((user) => {
       if (isCancelled) {
         return;
       }
-      if (!me) {
+      if (!user) {
         router.replace("/login");
         return;
       }

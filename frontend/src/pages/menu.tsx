@@ -11,7 +11,8 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { Title, Subtitle } from "@/components/layout/Title";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getMe, useUsername } from "@/api/user";
+import { getSession } from "@/api/auth";
+import { useUsername } from "@/api/user";
 
 // h-auto and whitespace-normal undo the single-line sizing the Button ships with.
 const bigButtonClasses =
@@ -25,7 +26,7 @@ export default function Menu() {
 
   async function handleCreate() {
     // same as the other private pages: no session, back to the login
-    if (!(await getMe())) {
+    if (!(await getSession())) {
       router.push("/login");
       return;
     }

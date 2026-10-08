@@ -87,6 +87,40 @@ export class AuthService {
         return this.createSession(user.id, user.name);
     }
 
+    // Jamais de 401 ici : le front demande juste "qui est connecte ?", y compris sur /login.
+    // Si le jwt a expire, on tente le refresh cote serveur et on renvoie les nouveaux tokens.
+    async getSession(accessToken: string | undefined, refreshToken: string | undefined): Promise<{
+        user: { id: number; name: string } | null;
+        tokens?: { access_token: string; refresh_token: string };
+    }>
+    {
+        if (accessToken) {
+            try {
+                const payload = await this.jwtService.verifyAsync(accessToken);
+                const user = await this.prisma.user.findUnique({
+                    where: { id: payload.sub },
+                    select: { id: true, name: true },
+                });
+                if (user)
+                    return { user };
+            }
+            catch {
+                // jwt expire ou invalide : on essaie le refresh_token
+            }
+        }
+        if (refreshToken) {
+            try {
+                const tokens = await this.refresh(refreshToken);
+                const payload = this.jwtService.decode(tokens.access_token);
+                return { user: { id: payload.sub, name: payload.username }, tokens };
+            }
+            catch {
+                // refresh_token expire, revoque ou compte supprime
+            }
+        }
+        return { user: null };
+    }
+
     private async createSession(userId: number, username: string)
     {
         const payload = { sub: userId, username };

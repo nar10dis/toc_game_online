@@ -1,4 +1,24 @@
+export type SessionUser = { id: number; name: string };
+
 let refreshInProgress: Promise<boolean> | null = null;
+let sessionInProgress: Promise<SessionUser | null> | null = null;
+
+// Always a 200: null when nobody is logged in, so the console stays clean on /login.
+// The backend refreshes the session itself, so parallel calls share one request.
+export function getSession(): Promise<SessionUser | null> {
+  if (sessionInProgress) {
+    return sessionInProgress;
+  }
+
+  sessionInProgress = fetch("/api/auth/session")
+    .then((response) => (response.ok ? response.json() : { user: null }))
+    .then((body: { user: SessionUser | null }) => body.user)
+    .catch(() => null)
+    .finally(() => {
+      sessionInProgress = null;
+    });
+  return sessionInProgress;
+}
 
 // The refresh_token changes on every refresh, so parallel refreshes would fail: they share one
 export function refreshAuth(): Promise<boolean> {

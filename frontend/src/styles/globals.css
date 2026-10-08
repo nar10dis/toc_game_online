@@ -151,6 +151,10 @@ a {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Chrome draws the system scrollbar (white track, arrows) by default:
+       a thin one in the palette instead, the same in every browser */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
   body {
     @apply bg-background text-foreground;

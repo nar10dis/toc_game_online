@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { fetchWithRefresh, readError } from "@/api/auth";
+import { fetchWithRefresh, getSession, readError } from "@/api/auth";
 
 export type Me = {
   userId: number;
@@ -68,21 +68,13 @@ export async function deleteAccount(password: string): Promise<void> {
   }
 }
 
-export async function getUsername(): Promise<string | null> {
-  const me = await getMe();
-  if (!me) {
-    return null;
-  }
-  return me.user.name;
-}
-
 // The jwt cookie is httpOnly, so asking the backend is the only way to know if we are logged in
 export function useIsLogged(): boolean {
   const [isLogged, setIsLogged] = useState(false);
 
   useEffect(() => {
-    getMe().then((me) => {
-      if (me) {
+    getSession().then((user) => {
+      if (user) {
         setIsLogged(true);
       }
     });
@@ -95,7 +87,11 @@ export function useUsername(): string | null {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    getUsername().then(setUsername);
+    getSession().then((user) => {
+      if (user) {
+        setUsername(user.name);
+      }
+    });
   }, []);
 
   return username;
