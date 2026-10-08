@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { SendIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,9 @@ export function GlobalChat() {
         {messages.map((message) => (
           <li key={message.id} className="break-words">
             <span className="mr-1 text-xs text-muted-foreground">{formatTime(message.sentAt)}</span>
-            <span className="font-bold">{message.pseudo}</span>
+            <Link href={`/players/${message.userId}`} className="font-bold hover:underline">
+              {message.pseudo}
+            </Link>
             <span> : {message.text}</span>
           </li>
         ))}

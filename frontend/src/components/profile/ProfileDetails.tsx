@@ -75,15 +75,7 @@ function ProfileBio({ bio, onEdit }: { bio: string | null; onEdit?: () => void }
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <blockquote className="relative max-w-md px-8 text-center font-body text-lg whitespace-pre-line wrap-anywhere">
-        <span aria-hidden className="absolute -top-3 left-0 font-heading text-5xl leading-none text-primary/40">
-          &ldquo;
-        </span>
-        {bio}
-        <span aria-hidden className="absolute right-0 -bottom-6 font-heading text-5xl leading-none text-primary/40">
-          &rdquo;
-        </span>
-      </blockquote>
+      <BioQuote bio={bio} />
       <Button variant="ghost" size="sm" onClick={onEdit} className="gap-1.5 rounded-full text-muted-foreground">
         <PencilIcon />
         Edit bio
@@ -92,7 +84,21 @@ function ProfileBio({ bio, onEdit }: { bio: string | null; onEdit?: () => void }
   );
 }
 
-function ProfileStat({ label, value }: { label: string; value: number }) {
+export function BioQuote({ bio = "" }: { bio?: string }) {
+  return (
+    <blockquote className="relative max-w-md px-8 text-center font-body text-lg whitespace-pre-line wrap-anywhere">
+      <span aria-hidden className="absolute -top-3 left-0 font-heading text-5xl leading-none text-primary/40">
+        &ldquo;
+      </span>
+      {bio}
+      <span aria-hidden className="absolute right-0 -bottom-6 font-heading text-5xl leading-none text-primary/40">
+        &rdquo;
+      </span>
+    </blockquote>
+  );
+}
+
+export function ProfileStat({ label, value }: { label: string; value: number }) {
   return (
     <WornFrame className="min-w-32 text-center md:min-w-36">
       <div className="flex flex-col items-center">
