@@ -4,7 +4,7 @@ import { refreshAuth } from "@/api/auth";
 
 let chatSocket: Socket | null = null;
 
-/** The global chat socket. Only opened while a page shows the chat. */
+/** The global chat socket. Opened the first time a page shows the chat, then kept open. */
 export function getChatSocket(): Socket {
   if (chatSocket) {
     return chatSocket;

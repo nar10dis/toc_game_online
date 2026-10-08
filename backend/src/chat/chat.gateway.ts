@@ -32,6 +32,12 @@ export class ChatGateway implements OnGatewayConnection {
         client.emit('history', this.chatService.getHistory());
     }
 
+    // Le front garde la socket ouverte entre deux pages : il redemande l'historique en revenant
+    @SubscribeMessage('history')
+    handleHistory() {
+        return this.chatService.getHistory();
+    }
+
     // Le message part a tout le monde, l'auteur compris. Le retour part dans l'ack.
     @SubscribeMessage('message')
     async handleMessage(@ConnectedSocket() client: Socket, @MessageBody() body: { text: string }) {
