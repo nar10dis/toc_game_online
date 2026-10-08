@@ -35,6 +35,11 @@ export class ProfileService {
     return { ...profile, stats: { friendsCount, gamesPlayed } };
   }
 
+  async findPublic(userId: number) {
+    const profile = await this.findOne(userId);
+    return { ...profile, user: { name: profile.user.name, createdAt: profile.user.createdAt } };
+  }
+
   // async findAll() {
   //     const profiles = await this.prisma.profile.findMany()
   //     return profiles;

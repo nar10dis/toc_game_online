@@ -1,4 +1,4 @@
-import { Controller, UseGuards, Get, Post, Body, Patch, Delete, Res, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, UseGuards, Get, Post, Body, Patch, Delete, Res, UseInterceptors, UploadedFile, Param, ParseIntPipe } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import type { Response } from 'express';
@@ -17,6 +17,13 @@ export class ProfileController {
   @Get()
   findOne(@CurrentUser() user: { sub: number }) {
     return this.profileService.findOne(user.sub);
+  }
+
+  // Profil d'un autre joueur, sans son email
+  @UseGuards(AuthGuard)
+  @Get(':id')
+  findPublic(@Param('id', ParseIntPipe) id: number) {
+    return this.profileService.findPublic(id);
   }
 
   // @UseGuards(AuthGuard)

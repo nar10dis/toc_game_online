@@ -35,6 +35,7 @@ The goal of the project was to build a complete real-time multiplayer web game, 
 - Real-time games for **4 players**, created and joined with an invite code.
 - Empty seats are taken by **AI opponents**, with three levels (easy, medium, hard).
 - A player who leaves is **replaced by a bot** and can come back to the game at any time.
+- **Global chat** on the main menu, shared by every logged-in player.
 - **In-game chat**, game log, move previews, and explanations of why a card cannot be played.
 - **User accounts**: sign up, log in, profile with bio and avatar, password change, log out, account deletion.
 - **Friends** with live online status.
@@ -464,6 +465,16 @@ click a card, then a pawn (front end, useTurnChoice)
 ```
 
 Every visible change goes through **one** `commit` (save in the `Map`, then broadcast): there is never a half-applied state.
+
+**Global chat** (namespace **`/chat`**, same path and same jwt check)
+
+| Direction | Message | Content | When |
+|---|---|---|---|
+| server → client | `history` | the last 50 messages | on every connection |
+| server → client | `message` | `{ id, userId, pseudo, text, sentAt }` | someone sends a message |
+| client → server | `message` | `{ text }` (1 to 200 characters) + ack `{ ok } \| { error }` | the player sends a message |
+
+The menu opens this socket when it mounts and closes it when it unmounts, so each visit gets the history again. Like the game chat, messages are kept in memory only.
 
 ---
 
