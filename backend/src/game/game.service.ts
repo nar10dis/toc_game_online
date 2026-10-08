@@ -5,14 +5,9 @@ import * as GameTypes from './game.types';
 import { initGame, addPlayer, initStartingGame, startRound, playTurn} from './engine/state';
 import { chooseAIAction } from './engine/AI/AI';
 
-// Pause entre deux coups de bot, sinon le joueur ne voit rien passer.
-// Un bot "reflechit" entre 1 et 3 secondes avant de jouer.
 const BOT_MIN_DELAY_MS = 1000;
 const BOT_MAX_DELAY_MS = 3000;
-// Temps laisse a un joueur pour revenir (refresh, jwt expire, coupure wifi)
-// avant que l'IA ne prenne sa place.
 const RECONNECT_GRACE_MS = 5000;
-// Messages de chat gardes par partie : les plus vieux sont oublies.
 const MAX_CHAT_HISTORY = 50;
 
 @Injectable()
@@ -22,8 +17,10 @@ export class GameService {
     private games = new Map<number, GameTypes.Game>();
     // userId -> timer qui le declarera deconnecte s'il ne revient pas a temps
     private disconnectTimers = new Map<number, NodeJS.Timeout>();
-    // une seule boucle de bots par partie, sinon deux bots jouent le meme tour
+    //set == number = gameID
     private botLoops = new Set<number>();
+    // userId -> la derniere partie qu'il a creee ou rejointe : c'est la qu'il revient en actualisant
+    private lastGameOfUser = new Map<number, number>();
     // gameId -> derniers messages du chat, renvoyes a un client qui (re)arrive
     private chats = new Map<number, GameTypes.ChatMessage[]>();
     private nextChatMessageId = 1;
@@ -201,10 +198,9 @@ export class GameService {
         void this.runBots(gameId);
     }
 
-    // Fait jouer les bots (et l'IA qui remplace un deconnecte) tant que c'est a eux, un commit par coup.
-    // La partie est relue dans la Map a chaque tour : pendant la pause, un joueur
-    // a pu revenir, partir, ou la partie a pu etre abandonnee.
     private async runBots(gameId: number) {
+
+        //verrou pour pas avoir deux bots de la meme game qui tournent.
         if (this.botLoops.has(gameId))
             return;
         this.botLoops.add(gameId);
