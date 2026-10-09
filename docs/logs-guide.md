@@ -45,6 +45,7 @@ Le seuil se règle dans `logger.config.ts` (`level: 'debug'`) : tout ce qui est 
 | WebSocket des amis | **`FriendsGateway`**, à la main | `ws connection refused: invalid jwt` (warn) / `notifyFriendsOf failed` (error) | `FriendsGateway` |
 | Code en arrière-plan (bots, timers) | **`GameService`**, à la main | `runBots crashed` / `bot could not play` (error), `player disconnected, AI takes over` / `player reconnected` / `game abandoned: no human left` (info), `abandonGame: DB update failed` (error) | `GameService` |
 | Demande d'ami rejouée (conflit Postgres) | **`FriendsService`** | `friend request retried after conflict` (debug) | `FriendsService` |
+| Chaque coup joué (humain ou bot) | **`GameService.commit()`** | `move played` (debug) : `gameId`, `seat`, `action`, `captured`, `newRound`, `winner` | `GameService` |
 
 ### Pourquoi les deux premiers ne suffisent pas
 
@@ -80,6 +81,7 @@ Les deux ont le **même `req.id`**, c'est comme ça qu'on les relie.
 | | handshake refusé (JWT invalide ou absent) → warn |
 | `friends/friends.gateway.ts` | handshake refusé → warn ; `notifyFriendsOf` dans un `try/catch` (avant, une panne de la base à la connexion devenait une promesse rejetée que personne ne voyait) |
 | `friends/friends.service.ts` | retry d'une demande d'ami après un conflit de transaction → debug |
+| `game/game.service.ts` | `move played` (debug) dans `commit()` : chaque coup, pour retracer une partie en filtrant sur `gameId` |
 
 **Volontairement non loggé :**
 
