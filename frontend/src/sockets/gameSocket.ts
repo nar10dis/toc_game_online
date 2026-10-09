@@ -32,3 +32,9 @@ export function getSocket(): Socket {
 
   return socket;
 }
+
+/** Closes the socket: the next `getSocket` opens a new one with the new user's cookie. */
+export function disconnectSocket() {
+  socket?.disconnect();
+  socket = null;
+}

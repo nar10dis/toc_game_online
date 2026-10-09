@@ -12,6 +12,7 @@ const BOT_MIN_DELAY_MS = 1000;
 const BOT_MAX_DELAY_MS = 3000;
 const RECONNECT_GRACE_MS = 5000;
 const MAX_CHAT_HISTORY = 50;
+const FINISHED_GAME_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class GameService {
@@ -52,6 +53,32 @@ export class GameService {
 				winner: game.winner,
 			}, 'move played');
 		this.broadcast?.(game, event);
+		if (game.phase === 'finished')
+			void this.finishGame(game);
+	}
+
+	private async finishGame(game: GameTypes.Game) {
+		this.logger.log({ gameId: game.id, winner: game.winner }, 'game finished');
+		setTimeout(() => this.releaseGame(game.id), FINISHED_GAME_TTL_MS);
+		try {
+			await this.prisma.game.update({
+				where: { idGame: game.id },
+				data: { phase: 'finished', winnerSeat: game.winner, finishedAt: new Date() },
+			});
+		}
+		catch (error) {
+			this.logger.error({ err: error, gameId: game.id }, 'finishGame: DB update failed');
+		}
+	}
+
+	private releaseGame(gameId: number) {
+		const game = this.games.get(gameId);
+		this.games.delete(gameId);
+		this.chats.delete(gameId);
+		for (const player of game?.players ?? []) {
+			if (player.userId !== null && this.lastGameOfUser.get(player.userId) === gameId)
+				this.lastGameOfUser.delete(player.userId);
+		}
 	}
 
 	// La derniere partie creee ou rejointe par le joueur (pour la resynchro d'un client).
@@ -115,8 +142,6 @@ export class GameService {
 
 		const dbGame = await this.prisma.game.create({ data: { inviteCode, phase: 'waiting' } });
 
-		await this.prisma.gamePlayer.create({ data: { gameId: dbGame.idGame, userId, seat: 0 } });
-
 		//MODIFICATION DE GAME.
 		let game: GameTypes.Game = initGame(dbGame.idGame, inviteCode);
 		game = addPlayer(game, userId, pseudo);
@@ -146,15 +171,11 @@ export class GameService {
 			return { gameId: game.id, inviteCode };
 		}
 
-		const seat = game.players.length as GameTypes.Seat;
-
 		// Le siege est pris en memoire AVANT le premier await : Node ne coupe jamais ce bout de code,
 		// donc deux joins en meme temps ne peuvent pas voir la meme place libre (sinon 6 joueurs).
 		game = addPlayer(game, userId, pseudo);
 		this.commit(game);
 		this.lastGameOfUser.set(userId, game.id);
-
-		await this.prisma.gamePlayer.create({ data: { gameId: game.id, userId, seat } });
 
 		return { gameId: game.id, inviteCode };
 	}
@@ -178,18 +199,6 @@ export class GameService {
 			}
 			this.commit({ ...game, players });
 			this.logger.log({ gameId: game.id, userId }, 'player left the waiting room');
-			try {
-				await this.prisma.gamePlayer.deleteMany({ where: { gameId: game.id, userId } });
-				for (const p of players)
-					await this.prisma.gamePlayer.updateMany({
-						where: { gameId: game.id, userId: p.userId! },
-						data: { seat: p.seat },
-					});
-			}
-			catch (error) {
-				this.logger.error({ err: error, gameId: game.id, userId },
-					'leaveGame: DB update failed');
-			}
 			return { ok: true };
 		}
 
@@ -222,7 +231,14 @@ export class GameService {
 		game = startRound(initStartingGame(game));
 		this.commit(game);
 
-		await this.prisma.game.update({ where: { idGame: gameId }, data: { phase: 'playing' } });
+		const humans = game.players.filter(p => p.userId !== null);
+		await this.prisma.game.update({
+			where: { idGame: gameId },
+			data: {
+				phase: 'playing',
+				gamePlayers: { create: humans.map(p => ({ userId: p.userId!, seat: p.seat })) },
+			},
+		});
 
 		// le siege 0 est toujours un humain (l'hote), mais au cas ou.
 		this.startBots(gameId);
@@ -414,8 +430,7 @@ export class GameService {
 	// Partie terminee sans gagnant (winnerSeat null) : tous les humains sont partis.
 	private async abandonGame(gameId: number) {
 		this.logger.log({ gameId }, 'game abandoned: no human left');
-		this.games.delete(gameId);
-		this.chats.delete(gameId);
+		this.releaseGame(gameId);
 		try {
 			await this.prisma.game.update({
 				where: { idGame: gameId },

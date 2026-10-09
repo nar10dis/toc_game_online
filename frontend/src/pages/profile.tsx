@@ -11,6 +11,7 @@ import { ProfileDetails } from "@/components/profile/ProfileDetails";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 import { ProfilePasswordForm } from "@/components/profile/ProfilePasswordForm";
 import { logout } from "@/api/auth";
+import { disconnectSocket } from "@/sockets/gameSocket";
 import { getMe } from "@/api/user";
 import type { Me } from "@/api/user";
 
@@ -52,6 +53,7 @@ export default function Profile() {
   async function handleLogout() {
     try {
       await logout();
+      disconnectSocket();
       router.push("/login");
     } catch (error) {
       setNotice((error as Error).message);

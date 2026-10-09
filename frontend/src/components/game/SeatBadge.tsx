@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import { TEAM_COLORS } from "@/lib/game/boardGeometry";
 import { handDrawnCirclePath } from "@/lib/game/handDrawn";
 import { TEAM_PICTURES } from "@/components/game/PlayerAvatars";
@@ -30,8 +32,9 @@ export function SeatBadge({ seat, isTaken, className }: SeatBadgeProps) {
   const center = VIEW_SIZE / 2;
   const color = isTaken ? TEAM_COLORS[seat] : EMPTY_COLOR;
   // ids must be unique in the page: the lobby draws the four seats side by side
-  const filterId = `seat-badge-invert-${seat}`;
-  const maskId = `seat-badge-mask-${seat}`;
+  const uid = useId();
+  const filterId = `seat-badge-invert-${uid}`;
+  const maskId = `seat-badge-mask-${uid}`;
   const pictureX = center - PICTURE_WIDTH / 2;
   const pictureY = center - PICTURE_HEIGHT / 2;
 
