@@ -48,7 +48,7 @@ if [ -f /setup/kibana-export.ndjson ]; then
     sleep 5
   done
   curl -sSf -u "$AUTH" -X POST "$KB/api/saved_objects/_import?overwrite=true" \
-       -H "kbn-xsrf: true" --form file=@/setup/kibana-export.ndjson > /dev/null
+       -H "kbn-xsrf: true" --form file=@/setup/game_export.ndjson > /dev/null
   echo "   OK : import des objets Kibana"
 else
   echo "==> Pas de kibana-export.ndjson : import Kibana ignoré"
