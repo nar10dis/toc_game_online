@@ -126,21 +126,25 @@ type GameLogProps = {
   events: GameEvent[];
   /** Indexed by seat. */
   playerNames: string[];
+  /** false: no title to fold it, the list fills its box (mobile tabs). */
+  isFoldable?: boolean;
 };
 
 /** Who played what, newest first. Folds away on a click on its title. */
-export function GameLog({ events, playerNames }: GameLogProps) {
+export function GameLog({ events, playerNames, isFoldable = true }: GameLogProps) {
   const entries = buildEntries(events, playerNames);
 
-  return (
-    <details open className="mt-6 w-full">
-      <summary className="cursor-pointer font-heading text-lg font-bold">Journal</summary>
-
+  const list = (
+    <>
       {entries.length === 0 && (
         <p className="mt-2 text-sm text-muted-foreground">Aucun coup pour l&apos;instant.</p>
       )}
 
-      <ul className="mt-2 flex h-[22vh] flex-col gap-2 overflow-y-auto pr-1 text-sm">
+      <ul
+        className={`mt-2 flex flex-col gap-2 overflow-y-auto pr-1 text-sm ${
+          isFoldable ? "h-[22vh]" : "min-h-0 flex-1"
+        }`}
+      >
         <AnimatePresence initial={false}>
           {entries.map((entry) => (
             <motion.li
@@ -176,6 +180,17 @@ export function GameLog({ events, playerNames }: GameLogProps) {
           ))}
         </AnimatePresence>
       </ul>
+    </>
+  );
+
+  if (!isFoldable) {
+    return <div className="flex min-h-0 flex-1 flex-col">{list}</div>;
+  }
+
+  return (
+    <details open className="mt-6 w-full">
+      <summary className="cursor-pointer font-heading text-lg font-bold">Journal</summary>
+      {list}
     </details>
   );
 }

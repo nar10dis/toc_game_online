@@ -10,6 +10,8 @@ type ChatBoxProps = {
   /** Oldest first. */
   messages: ChatMessage[];
   onSend: (text: string) => Promise<ActionAnswer>;
+  /** false: no title to fold it, the messages fill its box (mobile tabs). */
+  isFoldable?: boolean;
 };
 
 /** "14:05", in the local time of the reader. */
@@ -18,7 +20,7 @@ function formatTime(sentAt: number): string {
 }
 
 /** The chat of the game. Folds away on a click on its title, like the log. */
-export function ChatBox({ messages, onSend }: ChatBoxProps) {
+export function ChatBox({ messages, onSend, isFoldable = true }: ChatBoxProps) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -51,11 +53,14 @@ export function ChatBox({ messages, onSend }: ChatBoxProps) {
     setDraft("");
   }
 
-  return (
-    <details open className="mt-6 w-full">
-      <summary className="cursor-pointer font-heading text-lg font-bold">Chat</summary>
-
-      <ul ref={listRef} className="mt-2 flex h-[18vh] flex-col gap-1 overflow-y-auto pr-1 text-sm">
+  const chat = (
+    <>
+      <ul
+        ref={listRef}
+        className={`mt-2 flex flex-col gap-1 overflow-y-auto pr-1 text-sm ${
+          isFoldable ? "h-[18vh]" : "min-h-0 flex-1"
+        }`}
+      >
         {messages.length === 0 && (
           <li className="text-muted-foreground">Aucun message pour l&apos;instant.</li>
         )}
@@ -84,6 +89,17 @@ export function ChatBox({ messages, onSend }: ChatBoxProps) {
       </form>
 
       {error !== "" && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    </>
+  );
+
+  if (!isFoldable) {
+    return <div className="flex min-h-0 flex-1 flex-col">{chat}</div>;
+  }
+
+  return (
+    <details open className="mt-6 w-full">
+      <summary className="cursor-pointer font-heading text-lg font-bold">Chat</summary>
+      {chat}
     </details>
   );
 }
