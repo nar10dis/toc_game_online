@@ -38,6 +38,11 @@ export class GameService {
     // set + broadcast : le serveur s'en souvient ET les joueurs le voient.
     private commit(game : GameTypes.Game, event: GameTypes.GameEvent | null = null) {
         this.games.set(game.id, game);
+        // chaque coup (humain ou bot) passe ici : de quoi rejouer une partie dans Kibana
+        if (event)
+            this.logger.debug({ gameId: game.id, seat: event.seat, action: event.action,
+                captured: event.captured.map(p => p.id), newRound: event.newRound,
+                winner: game.winner }, 'move played');
         this.broadcast?.(game, event);
     }
 

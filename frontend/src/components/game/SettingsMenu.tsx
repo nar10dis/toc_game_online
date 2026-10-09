@@ -7,32 +7,41 @@ export type GameSettings = {
 type SettingsMenuProps = {
   settings: GameSettings;
   onChange: (settings: GameSettings) => void;
+  /** false: no title to fold it (mobile tabs). */
+  isFoldable?: boolean;
 };
 
 /** Display options of the game. Folds away on a click on its title, like the log. */
-export function SettingsMenu({ settings, onChange }: SettingsMenuProps) {
+export function SettingsMenu({ settings, onChange, isFoldable = true }: SettingsMenuProps) {
+  const options = (
+    <div className="mt-2 flex flex-col gap-2 text-sm">
+      <label className="flex cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={settings.showCellIndexes}
+          onChange={(event) => onChange({ ...settings, showCellIndexes: event.target.checked })}
+        />
+        Afficher les numéros de cases
+      </label>
+      <label className="flex cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={settings.showTutorial}
+          onChange={(event) => onChange({ ...settings, showTutorial: event.target.checked })}
+        />
+        Afficher le tuto
+      </label>
+    </div>
+  );
+
+  if (!isFoldable) {
+    return options;
+  }
+
   return (
     <details open className="mt-6 w-full">
       <summary className="cursor-pointer font-heading text-lg font-bold">Paramètres</summary>
-
-      <div className="mt-2 flex flex-col gap-2 text-sm">
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={settings.showCellIndexes}
-            onChange={(event) => onChange({ ...settings, showCellIndexes: event.target.checked })}
-          />
-          Afficher les numéros de cases
-        </label>
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={settings.showTutorial}
-            onChange={(event) => onChange({ ...settings, showTutorial: event.target.checked })}
-          />
-          Afficher le tuto
-        </label>
-      </div>
+      {options}
     </details>
   );
 }

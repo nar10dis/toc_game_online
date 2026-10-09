@@ -9,7 +9,10 @@ services:
     container_name: backend
     env_file:
       - ./backend/.env
-    # no published ports: nginx reaches backend:3001 through docker-network
+    # nginx reaches backend:3001 through docker-network
+    # 51212 = prisma studio, on this machine only (127.0.0.1)
+    ports:
+      - "127.0.0.1:51212:51212"
     volumes:
       - ./backend:/app
       - /app/node_modules

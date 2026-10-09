@@ -3,6 +3,7 @@ import { useState } from "react";
 import { CardTable } from "@/components/game/CardTable";
 import { ChatBox } from "@/components/game/ChatBox";
 import { GameLog } from "@/components/game/GameLog";
+import { MobilePanels } from "@/components/game/MobilePanels";
 import { SettingsMenu, type GameSettings } from "@/components/game/SettingsMenu";
 import { DestinationMarkers } from "@/components/game/DestinationMarkers";
 import { PawnLayer } from "@/components/game/PawnLayer";
@@ -64,9 +65,10 @@ export default function Play() {
     }
 
     content = (
-      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
-        {/* scrolls on short screens, so the settings at the bottom stay reachable */}
-        <aside className="flex min-h-0 shrink-0 flex-col overflow-y-auto md:w-72">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 md:landscape:flex-row md:landscape:gap-4">
+        {/* wide landscape screens: the menus in a column on the left, the height goes to the board.
+            Scrolls on short screens, so the settings at the bottom stay reachable */}
+        <aside className="hidden min-h-0 shrink-0 flex-col overflow-y-auto md:landscape:flex md:landscape:w-72">
           <TurnControls game={game} turnChoice={turnChoice} />
           <GameLog events={events} playerNames={playerNames} />
           <ChatBox messages={chat.messages} onSend={chat.sendMessage} />
@@ -76,6 +78,11 @@ export default function Play() {
             <SettingsMenu settings={settings} onChange={setSettings} />
           </div>
         </aside>
+
+        {/* phones and portrait tablets: whose turn it is above the board, the menus in tabs under it */}
+        <div className="shrink-0 md:landscape:hidden">
+          <TurnControls game={game} turnChoice={turnChoice} />
+        </div>
 
         {/* a size container, so the board can be the biggest square that fits in it */}
         <div
@@ -121,6 +128,12 @@ export default function Play() {
           </div>
         </div>
 
+        <MobilePanels
+          log={<GameLog events={events} playerNames={playerNames} isFoldable={false} />}
+          chat={<ChatBox messages={chat.messages} onSend={chat.sendMessage} isFoldable={false} />}
+          settings={<SettingsMenu settings={settings} onChange={setSettings} isFoldable={false} />}
+        />
+
         {game.phase === "finished" && game.winner !== null && (
           <WinScreen
             winnerSeat={game.winner}
@@ -137,7 +150,7 @@ export default function Play() {
   return (
     <div className="flex h-svh w-full flex-col overflow-clip" style={paperStyle}>
       <Header />
-      <main className="relative flex min-h-0 flex-1 flex-col p-4 md:p-6">
+      <main className="relative flex min-h-0 flex-1 flex-col p-3 md:p-6">
         <div
           style={{
             position: "absolute",
