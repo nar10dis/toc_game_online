@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/auth/PasswordInput"
-import { DevAccountButton } from "@/components/auth/DevAccountButton"
 
 export function RegisterForm({
   className,
@@ -120,7 +119,6 @@ export function RegisterForm({
           <Button type="submit" disabled={loading}>
             {loading ? "Creating..." : "Create Account"}
           </Button>
-          <DevAccountButton />
         </Field>
         <Field>
           <Link
