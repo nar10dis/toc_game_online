@@ -1,6 +1,5 @@
 #!/bin/bash
-# Script d'initialisation : lancé à chaque "docker compose up".
-# Rejouable sans risque : les PUT écrasent l'existant.
+# Script d'initialisation, les PUT écrasent l'existant.
 set -e   # arrête le script à la première erreur
 
 ES=http://elasticsearch:9200
@@ -8,14 +7,14 @@ KB=http://kibana:5601
 AUTH="elastic:${ELASTIC_PASSWORD}"
 JSON="Content-Type: application/json"
 
-# Petite fonction pour éviter de répéter curl partout.
+# Fonction pour éviter de répéter curl
 # Usage : call METHODE CHEMIN CORPS   (CORPS peut être @fichier.json)
 call() {
   curl -sSf -u "$AUTH" -X "$1" "$ES/$2" -H "$JSON" -d "$3" > /dev/null
   echo "   OK : $1 $2"
 }
 
-# 1) Attendre qu'Elasticsearch réponde (on réessaie toutes les 3 s).
+# 1) Attendre qu'Elasticsearch réponde
 echo "==> Attente d'Elasticsearch..."
 until curl -sf -u "$AUTH" "$ES/_cluster/health" > /dev/null; do
   sleep 3
@@ -27,7 +26,12 @@ echo "==> Politique de cycle de vie et template"
 call PUT _ilm/policy/app-logs-policy        @/setup/ilm-policy.json
 call PUT _index_template/app-logs-template  @/setup/index-template.json
 # Rattrape les index déjà existants (utile si on rejoue le script).
-call PUT "app-logs-*/_settings" '{"index.lifecycle.name":"app-logs-policy","index.number_of_replicas":0}'
+echo "==> Recuperation des index existants"
+if  [ -n "$(curl -sf -u "$AUTH" "$ES/_cat/indices/app-logs-*?h=index")" ]; then
+  call PUT "app-logs-*/_settings" '{"index.lifecycle.name":"app-logs-policy","index.number_of_replicas":0}'
+  else
+    echo "Aucun index existant a recuperer: installation neuve"
+fi
 
 # 3) Comptes : un pour Logstash, et le mot de passe du compte interne de Kibana.
 echo "==> Comptes de service"
