@@ -12,16 +12,19 @@ export const LoggerConfig = LoggerModule.forRoot({
     },
     // NEVER SEND JWT
     redact: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
+    //pino prend en charge le transport dans un thread separe !
     transport: {
       targets: [
         {
           target: 'pino/file',
+          level: 'debug',
           options: {
             destination: 1,
           },
         },
         {
           target: 'pino-socket',
+          level: 'debug',
           options: {
             address: 'logstash',
             port: 5000,

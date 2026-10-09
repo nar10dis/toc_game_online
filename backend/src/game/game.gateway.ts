@@ -106,9 +106,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     // Meme regle que AllExceptionFilter : HttpException = coup refuse (warn), le reste = bug (error).
     private logWsError(event: string, error: unknown, details: object) {
         if (error instanceof HttpException)
-            this.logger.warn({ ...details, event, status: error.getStatus(), err: error }, 'ws event refused');
+            this.logger.warn({ ...details, wsEvent: event, status: error.getStatus(), err: error }, 'ws event refused');
         else
-            this.logger.error({ ...details, event, err: error }, 'ws event crashed');
+            this.logger.error({ ...details, wsEvent: event, err: error }, 'ws event crashed');
     }
 
     // L'historique du chat, pour un client qui arrive en cours de partie.
