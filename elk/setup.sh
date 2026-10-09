@@ -25,6 +25,8 @@ done
 echo "==> Politique de cycle de vie et template"
 call PUT _ilm/policy/app-logs-policy        @/setup/ilm-policy.json
 call PUT _index_template/app-logs-template  @/setup/index-template.json
+
+
 # Rattrape les index déjà existants (utile si on rejoue le script).
 echo "==> Recuperation des index existants"
 if  [ -n "$(curl -sf -u "$AUTH" "$ES/_cat/indices/app-logs-*?h=index")" ]; then
