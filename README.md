@@ -2,6 +2,10 @@
 
 # TocGameOnline
 
+<p align="center">
+  <img src="docs/design-system/campfire.gif" width="440" alt="The four demons dancing around the campfire">
+</p>
+
 ## Table of contents
 
 1. [Description](#description)
@@ -67,7 +71,11 @@ cp backend/.env.example backend/.env
 | File | Variables | Used by |
 |---|---|---|
 | `.env` | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | postgres, frontend, nginx |
+| `.env` | `ELASTIC_PASSWORD`, `KIBANA_PASSWORD`, `LOGSTASH_PASSWORD` | elasticsearch, kibana, logstash |
 | `backend/.env` | `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `PORT` (optional, 3001 by default) | backend |
+| `backend/.env` | `QUICK_GAME` (`0` by default; `1` = one pawn per player, to reach the win screen quickly during the evaluation) | backend |
+
+Both `.env` files are listed in `.gitignore` and are never committed.
 
 `DATABASE_URL` must use the same user, password and database as `.env`, with `postgres` (the Docker service name) as host:
 `postgresql://<user>:<password>@postgres:5432/<db>`.
@@ -249,26 +257,29 @@ Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`
 
 ## Features
 
-| Feature | Description |
-|---|---|
-| Sign up / log in | Email and password, server-side checks, bcrypt hash, JWT in httpOnly cookies |
-| Session refresh | 15-minute access token, 7-day refresh token with rotation, stored as a hash and revocable |
-| Private pages | Every page except login, register, rules and legal pages sends to `/login` when nobody is logged in |
-| Profile | Name, bio, avatar upload (checked on the real file bytes, with initials by default), statistics |
-| Account | Change password, log out, delete the account (password asked again) |
-| Friends | Send, accept, decline, remove; online status updated live |
-| Create / join a game | Invite code, live waiting room, the host sets the bot levels |
-| Rules engine | All Tock rules: exit, move, enter home, swap (Jack), back (4), split (7), captures, blocking, discard |
-| AI opponents | Three levels (easy, medium, hard), human-like delay between moves |
-| Disconnections | Grace delay, a bot plays for the missing player, the player can reconnect at any time |
-| Game board | Board seen from your own seat, animated pawns, move previews, card hand, played-card colours |
-| Turn feedback | Turn banner, game log, card hints and reasons why a card cannot be played |
-| In-game chat | Messages between the players of a game, history kept for players who reconnect |
-| Win screen | Winner announcement with confetti |
-| Rules page | Every card explained, with tilting cards |
-| Privacy Policy / Terms of Service | Real content, linked from the footer |
-| Infrastructure | Docker Compose, nginx (HTTPS), PostgreSQL, Prisma migrations |
-| Logs | ELK stack, structured logs, error-handling layers |
+| Feature | Description | Member(s) |
+|---|---|---|
+| Sign up / log in | Email and password, server-side checks, bcrypt hash, JWT in httpOnly cookies | elaudrez, barmarti |
+| Session refresh | 15-minute access token, 7-day refresh token with rotation, stored as a hash and revocable | elaudrez, nadeluge |
+| Private pages | Every page except login, register, rules and legal pages sends to `/login` when nobody is logged in | nadeluge |
+| Profile | Name, bio, avatar upload (checked on the real file bytes, with initials by default), statistics | nadeluge, elaudrez, barmarti |
+| Public profiles | Any user's profile at `/players/[id]`, reachable from the friends list and the global chat | nadeluge |
+| Account | Change password, log out, delete the account (password asked again) | nadeluge |
+| Friends | Send, accept, decline, remove; online status updated live | nadeluge, barmarti |
+| Global chat | Chat on the main menu shared by every logged-in player, last 50 messages on arrival | nadeluge |
+| Create / join a game | Invite code, live waiting room, the host sets the bot levels | nadeluge, jazema |
+| Rules engine | All Tock rules: exit, move, enter home, swap (Jack), back (4), split (7), captures, blocking, discard | nadeluge |
+| AI opponents | Three levels (easy, medium, hard), human-like delay between moves | nadeluge |
+| Disconnections | Grace delay, a bot plays for the missing player, the player can reconnect at any time | nadeluge, jazema |
+| Game board | Board seen from your own seat, animated pawns, move previews, card hand, played-card colours | jazema |
+| Turn feedback | Turn banner, game log, card hints and reasons why a card cannot be played | jazema |
+| In-game chat | Messages between the players of a game, history kept for players who reconnect | jazema |
+| Win screen | Winner announcement with confetti | jazema |
+| Rules page | Every card explained, with tilting cards | nadeluge |
+| Design system | Palette, typography, worn lines, hand-drawn shapes, illustrations, reusable components | nadeluge, jazema |
+| Privacy Policy / Terms of Service | Real content, linked from the footer | nadeluge |
+| Infrastructure | Docker Compose, nginx (HTTPS), PostgreSQL, Prisma migrations | elaudrez |
+| Logs | ELK stack with retention and secured access; structured logs and error-handling layers | elaudrez, nadeluge |
 
 ---
 
@@ -302,10 +313,12 @@ Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`
 - **Demo:** two browsers in the same waiting room, then a game: every move, chat message and seat change appears on both screens.
 
 ### 3. User interaction (Major, 2 pts)
-<!-- TODO before the defense: public profile page of another user (e.g. /profile/[name], reachable from the friends list) and, if possible, chat between friends outside a game. Update this paragraph once done. -->
 - **Why:** a game is more fun with people you know: you find them, add them, and talk to them.
-- **How:** chat between the players of a game (history kept for reconnecting players), profile pages showing a user's information, and a friends system (add, accept, remove, friends list with live online status).
-- **Demo:** add a friend from `/friends`, see them come online, open their profile, chat with them during a game.
+- **How:**
+  - **chat:** a global chat on the main menu for every logged-in player, and a chat between the players of a game (history kept for reconnecting players);
+  - **profiles:** a public profile page for every user (`/players/[id]`, reachable from the friends list), with their name, bio, avatar and statistics;
+  - **friends:** add, accept, decline, remove, and a friends list with live online status.
+- **Demo:** add a friend from `/friends`, see them come online, open their profile, talk in the global chat, then chat with them during a game.
 
 ### 4. ORM (Minor, 1 pt)
 - **Why:** typed queries and versioned database changes that every team member can apply.
@@ -343,9 +356,11 @@ Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`
 - **Demo:** start a game alone with three hard bots, then with easy bots, and compare.
 
 ### 11. Log management with ELK (Major, 2 pts)
-<!-- TODO before the defense: log retention policy (ILM) and secured access to Kibana / Elasticsearch. Update this paragraph once done. -->
 - **Why:** with a backend, WebSockets, background bots and nginx, we needed one place to understand what happened during a game.
-- **How:** see [Error handling and logs](#error-handling-and-logs). Logs from the backend (pino) and nginx go through Logstash into Elasticsearch, with a retention policy, and are explored in Kibana with secured access.
+- **How:** see [Error handling and logs](#error-handling-and-logs). Logs from the backend (pino) and nginx go through Logstash into Elasticsearch and are explored in Kibana.
+  - **Retention:** an ILM policy (`elk/ilm-policy.json`) keeps the logs *hot* for 7 days, then makes them read-only (*warm*), and deletes them after 30 days.
+  - **Secured access:** Elasticsearch security is on (`xpack.security`). Each service has its own account and password from `.env`: `elastic` (admin), `kibana_system` for Kibana, and a `logstash_writer` role for Logstash that can only write to `app-logs-*`. Elasticsearch and Kibana only listen on `127.0.0.1`.
+  - **Set-up:** the one-shot `elk-setup` container (`elk/setup.sh`) creates the policy, the index template, the accounts and imports the Kibana dashboards, with no manual step.
 - **Demo:** play a move, then find it in Kibana with `context : "GameService" and gameId : <id>`.
 
 ---
@@ -506,90 +521,118 @@ Every colour is a CSS variable in `frontend/src/styles/globals.css` (`:root`). T
 - Both are loaded with `next/font` in `_app.tsx`.
 - Sizes follow a **modular scale with a 1.333 ratio** (`@theme` in `globals.css`), from `text-sm` (0.75 rem) to `text-5xl` (4.21 rem).
 
-### The worn line
-
-This is the visual signature of the site. Every line (frames, separators, underlines, header, footer) uses two custom CSS utilities:
-
-- **`worn-line`**: an SVG noise (`feTurbulence`) is used as a mask and erases the line in places, like worn ink.
-- **`worn-underline`**: the same for link underlines, without damaging the text.
-
-Round shapes (board cells, pawns, badges) use `lib/game/handDrawn.ts`, which draws slightly shaky circles and lines. The shake depends on a fixed seed: the drawing never changes from one render to the next.
-
 ### Illustrations
 
-The demons, the cards and the logo (`frontend/public/`) share the same ink style as the rest of the site.
+The demons, the cards and the logo (`frontend/public/`) are drawn by hand and share the same ink style as the rest of the site.
 
 <p>
   <img src="frontend/public/demons/heart_demon.png" height="90" alt="Heart demon">
   <img src="frontend/public/demons/spade_demon.png" height="90" alt="Spade demon">
   <img src="frontend/public/demons/diamond_demon.png" height="90" alt="Diamond demon">
   <img src="frontend/public/demons/club_demon.png" height="90" alt="Club demon">
-  &nbsp;&nbsp;
-  <img src="frontend/public/cards/card_heart_1.png" height="90" alt="Ace of hearts">
-  <img src="frontend/public/cards/card_spade_13.png" height="90" alt="King of spades">
-  <img src="frontend/public/cards/card_diamond_11.png" height="90" alt="Jack of diamonds">
 </p>
 
 Small interface icons come from `lucide-react` and follow the text colour (`currentColor`).
 
-### Reusable components
+### The ten signature components
 
-These components are written by us. They get their content through their props and depend on no page: they can be used anywhere.
+These components are written by us and carry the identity of the site. They get their content through their props and depend on no page: they can be used anywhere.
 
-#### Layout
+#### 1. The logo
 
-| Component | Role |
-|---|---|
-| `PageLayout` | the structure shared by every page: header, centred content, footer |
-| `Header` / `Footer` | the site banners, separated from the content by a worn line |
-| `Title` / `Subtitle` | page titles, on the type scale |
-| `WornFrame` | the "card" of the site: a double frame in worn lines, each line worn in different places |
+<img src="frontend/public/logo.png" width="120" alt="TocGameOnline logo">
+
+Drawn by hand, then used as a **CSS mask** (`.logo-mask` in `globals.css`): the drawing is painted with `currentColor`, so it always takes the ink colour of the page and reacts to hover like text. It sits in the `Header` and links to the menu.
+
+#### 2. `PageLayout`
 
 ![Header](docs/design-system/header.png)
 
+The shell shared by every page: the paper background (`paperStyle`), the `Header` with the logo, the centred content and the `Footer` with the Privacy Policy and Terms of Service links. Header and footer are separated from the content by a worn line. A page only has to write `<PageLayout>…</PageLayout>` to look like the rest of the site.
+
+#### 3. `WornFrame`, the worn card
+
 <img src="docs/design-system/worn-frame.png" width="320" alt="WornFrame">
 
-`WornFrame` is used for login, sign-up, every section of the rules, the profile, the join page, the Privacy Policy and the Terms of Service.
+The "card" of the site: a double frame drawn in worn lines, each line worn in different places. Used for login, sign-up, every section of the rules, the profile, the join page, the Privacy Policy and the Terms of Service.
 
-Buttons and the separator start from shadcn/ui but are restyled with our tokens and typography; the separator and the `link` button variant use the worn line:
+#### 4. The worn lines
 
 ![Buttons and separator](docs/design-system/buttons.png)
 
-#### Cards
+The visual signature of the site. Every line (frames, separators, underlines, header, footer) uses two custom CSS utilities:
+
+- **`worn-line`**: an SVG noise (`feTurbulence`) is used as a mask and erases the line in places, like worn ink.
+- **`worn-underline`**: the same for link underlines, without damaging the text.
+
+Buttons and the separator start from shadcn/ui but are restyled with our tokens and typography; the separator and the `link` button variant use the worn line.
+
+#### 5. The hand-drawn circles
+
+Round shapes are never perfect circles. `lib/game/handDrawn.ts` builds SVG paths that look drawn with a pen:
+
+- `handDrawnCirclePath(cx, cy, r, seed)`: a slightly shaky circle (the board cells, the pawns, the badges, the avatars of the players, the destination markers);
+- `handDrawnLinePath(points, seed)`: a shaky line (the trail of a moving pawn).
+
+The shake depends on a fixed **seed**, so a drawing never changes from one render to the next, and the numbers are rounded so the server and the browser draw exactly the same path.
+
+#### 6. `DemonCircle`
+
+<img src="docs/design-system/demon-circle.gif" width="380" alt="DemonCircle">
+
+| Props | Role |
+|---|---|
+| `children`, `variant` | a ring of demons turning around (or over) any content, each one leaving a `SparkleTrail` behind it |
+
+Used around the login and sign-up forms, and over the profile card on the profile pages (`variant="over"`).
+
+#### 7. `DemonCampfire`
+
+<img src="docs/design-system/campfire.gif" width="440" alt="DemonCampfire and CracklingFire">
+
+The four demons dancing around the fire, on the main menu. The fire itself (`CracklingFire`) is made entirely in code, with no image.
+
+#### 8. The cards: `TiltCard` and `CardRule`
+
+<img src="docs/design-system/tilt-card.gif" width="450" alt="TiltCard on hover">
 
 | Component | Props | Role |
 |---|---|---|
 | `TiltCard` | `imagePath`, `label` | a card that tilts towards the pointer and grows on hover (`motion` spring) |
 | `CardRule` | `name`, `imagePath`, `children` | a `TiltCard` with its name and explanation |
 
-<img src="docs/design-system/tilt-card.gif" width="450" alt="TiltCard on hover">
+<p>
+  <img src="frontend/public/cards/card_heart_1.png" height="90" alt="Ace of hearts">
+  <img src="frontend/public/cards/card_spade_13.png" height="90" alt="King of spades">
+  <img src="frontend/public/cards/card_diamond_11.png" height="90" alt="Jack of diamonds">
+</p>
 
 ![CardRule in a WornFrame](docs/design-system/card-rules.png)
 
-#### Demons and animations
+#### 9. `Pawn`
+
+| Props | Role |
+|---|---|
+| `color`, `position`, `path`, `isSelectable`, `onClick`… | a hand-drawn pawn in its team colour that hops cell by cell along `path` (it swells, leans and squashes when it lands), bursts when it is captured and pops back in its spawn |
+
+#### 10. `SeatBadge`
+
+| Props | Role |
+|---|---|
+| `seat`, `isTaken`, `className` | a seat's demon in a shaky circle in the team colour; greyed and dotted when the seat is free. Used in the waiting room, in the turn controls and on the win screen. |
+
+### Other components
 
 | Component | Props | Role |
 |---|---|---|
-| `DemonCircle` | `children`, `variant` | a ring of demons turning around (or over) any content |
-| `DemonDrawing` | `image` | any demon drawing, inked with the palette |
-| `SparkleTrail` | `getSpots` | a trail of sparkles behind what moves (the demons of the ring) |
-| `DemonCampfire` | — | the four demons dancing around the fire (menu) |
-| `CracklingFire` | — | the animated fire, made entirely in code |
-| `AngerMarks` | `isVisible` | small anger marks above a character |
-
-<p>
-  <img src="docs/design-system/demon-circle.gif" width="380" alt="DemonCircle">
-  <img src="docs/design-system/campfire.gif" width="440" alt="DemonCampfire and CracklingFire">
-</p>
-
-#### Game
-
-| Component | Props | Role |
-|---|---|---|
-| `SeatBadge` | `seat`, `isTaken` | a seat's demon in a shaky circle in the team colour; greyed and dotted when the seat is free |
-| `Pawn` | `color`, `position`, `path`, `isSelectable`, `onClick`… | a hand-drawn pawn that walks cell by cell along `path` |
+| `Board` | `boardSize`, `bottomSeat`, `children` | the hand-drawn board, turned so that each player sees their own seat at the bottom; pawns are drawn inside it |
 | `TurnBanner` | `isMyTurn`, `mySeat` | "Your turn!" written for a moment across the board |
 | `WinScreen` | `winnerSeat`, `winnerName`, `isMe` | the win screen with confetti |
+| `AngerMarks` | `isVisible` | small anger marks above a character |
+| `CracklingFire` | — | the animated fire of the campfire, made in code |
+| `SparkleTrail` | `getSpots` | a trail of sparkles behind what moves (the demons of the ring) |
+| `DemonDrawing` | `image` | any demon drawing, inked with the palette |
+| `Title` / `Subtitle` | `children` | page titles, on the type scale |
 | `PasswordInput` | the props of an `input` | a password field with a show / hide button |
 
 ---

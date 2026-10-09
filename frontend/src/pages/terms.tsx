@@ -35,6 +35,10 @@ export default function Terms() {
             <li>You need an account to play. Give a valid email address when you sign up.</li>
             <li>Keep your password to yourself: you are responsible for what happens on your account.</li>
             <li>One person, one account.</li>
+            <li>
+              You can delete your account at any time from the profile page. It cannot be undone:
+              your profile, friends and game history are erased with it.
+            </li>
           </ul>
         </Section>
 

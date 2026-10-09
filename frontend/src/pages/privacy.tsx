@@ -80,7 +80,12 @@ export default function Privacy() {
         <Section title="Your rights">
           <p>
             Under the GDPR, you can ask to see, correct or delete your data at any time. You can
-            already edit your profile from the profile page. For anything else, contact the
+            edit your username, bio and avatar from the profile page.
+          </p>
+          <p>
+            You can also <strong>delete your account</strong> yourself from the profile page, after
+            typing your password again. Your account, your profile, your avatar, your friendships
+            and your place in past games are then erased for good. For anything else, contact the
             project team.
           </p>
         </Section>
