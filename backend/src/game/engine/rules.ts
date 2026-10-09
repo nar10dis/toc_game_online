@@ -1,10 +1,9 @@
-import { Card, Pawn, Seat, HOME_CELLS_COUNT, BOARD_CELLS_COUNT} from "../game.types"
+import { Card, Pawn, Seat, HOME_CELLS_COUNT} from "../game.types"
 import { pawnAt, pathCells, getSeatOfStartCell, pawnsOf,
-	homeLastFreeCell, getStartHome, pawnAtHome, homeCellIndex} from "./board"
-import { mod } from "./utils"
+	homeLastFreeCell, pawnAtHome, homeCellIndex} from "./board"
 import { realValueOf } from "./deck"
 
-export function canExit(pawns: Pawn[], card : Card, pawn: Pawn) : boolean {
+export function canExit(card : Card, pawn: Pawn) : boolean {
 
 	if (pawn.position.zone !== 'spawn')
 			return false;
@@ -38,7 +37,6 @@ export function canMove(pawns: Pawn[], steps: number, pawn: Pawn) : boolean {
 export function canGoHome(pawns : Pawn[], steps: number, pawn: Pawn) : boolean {
 
 	const lastCell = homeLastFreeCell(pawns, pawn.playerSeat);
-	const startHome = getStartHome(pawn.playerSeat);
 
 	if (lastCell < 0)
 			return false;
@@ -46,9 +44,6 @@ export function canGoHome(pawns : Pawn[], steps: number, pawn: Pawn) : boolean {
 		return false;
 	if (steps <= 0)
 		return false;
-	const toEntry = mod(startHome - pawn.position.cell, BOARD_CELLS_COUNT);
-	const distanceMax = toEntry + 1 + lastCell;
-
 	const target = homeCellIndex(pawn.playerSeat, pawn.position.cell, steps);
 	if (target < 0 || target > lastCell)
 		return false;
@@ -75,7 +70,7 @@ export function canMoveInHome(pawns: Pawn[], steps: number, pawn: Pawn): boolean
 	return true;
 }
 
-export function canSwap(pawns: Pawn[], card: Card, pawnA: Pawn, pawnB: Pawn) : boolean {
+export function canSwap(card: Card, pawnA: Pawn, pawnB: Pawn) : boolean {
 
 	if (card.value !== 11)
 		return false;
@@ -92,7 +87,7 @@ export function canDiscard(pawns: Pawn[], card: Card, seat: Seat) : boolean {
 
 	for (const pawn of pawnsOf(pawns, seat))
 	{
-			if (canExit(pawns, card, pawn))
+			if (canExit(card, pawn))
 				return false;
 			if (canMove(pawns, realValueOf(card), pawn))
 				return false;

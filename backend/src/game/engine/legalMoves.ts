@@ -67,7 +67,7 @@ export function getLegalActions(hand : Card[], pawns: Pawn[], seat: Seat, pendin
 			{
 				for (let j = i + 1; j < pawns.length; j++)
 				{
-					if (Rules.canSwap(pawns, card, pawns[i], pawns[j]))
+					if (Rules.canSwap(card, pawns[i], pawns[j]))
 						swaps.push({type: 'swap', cardId: card.id, pawnIdA: pawns[i].id, pawnIdB: pawns[j].id});
 				}
 			}
@@ -82,7 +82,7 @@ export function getLegalActions(hand : Card[], pawns: Pawn[], seat: Seat, pendin
 				legalMoves.push({type: 'move', cardId: card.id, pawnId: pawn.id});
 			if (Rules.canGoHome(pawns, realValueOf(card), pawn))
 				legalMoves.push({type: 'enter', cardId: card.id, pawnId:pawn.id});
-			if (Rules.canExit(pawns, card, pawn))
+			if (Rules.canExit(card, pawn))
 				legalMoves.push({type: 'exit', cardId: card.id, pawnId: pawn.id});
 		}
 		if (Rules.canDiscard(pawns, card, seat))
