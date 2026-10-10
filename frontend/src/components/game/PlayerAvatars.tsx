@@ -50,7 +50,6 @@ const DEFAULT_PLAYER_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4"];
 
 /** The players waiting for their turn fade back, so the one playing stands out. */
 const WAITING_OPACITY = 0.4;
-/** Radius of the ring that pulses around the player whose turn it is. */
 const TURN_RING_RADIUS = AVATAR_RADIUS + 8;
 
 /* ************************************************************************** */

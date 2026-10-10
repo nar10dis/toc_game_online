@@ -7,7 +7,6 @@ const strokes = [
   { x1: 36, y1: 6, x2: 28, y2: 16 },
 ];
 
-/** Little anger strokes that pop above a demon's head. */
 export function AngerMarks({ isVisible }: { isVisible: boolean }) {
   return (
     <AnimatePresence>

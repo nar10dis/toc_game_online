@@ -91,7 +91,6 @@ export default function Play() {
         >
           {/* the cards sit inside the same box as the board, so they scroll and zoom with it */}
           <div style={{ position: "relative", width: BOARD_SIDE, height: BOARD_SIDE }}>
-            {/* everyone sees the board from their own seat, at the bottom */}
             <Board bottomSeat={game.mySeat} showIndexes={settings.showCellIndexes}>
               <PlayerAvatars
                 playerTeam={game.mySeat}
@@ -111,7 +110,6 @@ export default function Play() {
                 onClick={turnChoice.handleDestinationClick}
               />
             </Board>
-            {/* no cards on the board once the game is over */}
             {game.phase !== "finished" && (
               <CardTable
                 hand={game.myHand}

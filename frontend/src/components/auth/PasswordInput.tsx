@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils"
 
 import { Input } from "@/components/ui/input"
 
-/** A password input with an eye on the right: closed while the password is hidden, open while it shows. */
 export function PasswordInput({ className, ...props }: Omit<React.ComponentProps<"input">, "type">) {
   const [isVisible, setIsVisible] = useState(false)
 

@@ -16,7 +16,6 @@ export type GameState = {
   lastEvent: GameEvent | null;
   /** Every move seen since the page opened, oldest first. Empty after a reload. */
   events: GameEvent[];
-  /** True when the server says we are in no game at all. */
   hasNoGame: boolean;
   sendAction: (action: GameAction) => Promise<ActionAnswer>;
 };

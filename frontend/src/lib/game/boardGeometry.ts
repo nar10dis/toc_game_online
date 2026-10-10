@@ -37,7 +37,6 @@ export const TEAM_COLORS = [
   "var(--team-3)", // seat 3, drawn on the bottom arm
 ];
 
-/** Radius of the circle drawn for one cell. */
 export const CELL_RADIUS = 25;
 
 const HOME_CELL_SPACING = 80;
@@ -169,13 +168,11 @@ function walkHomeLine(
 ): Point {
   const g = geometry(boardSize);
 
-  // Tile 15 of this arm.
   const cell15 = computeCoordsFromIndex({
     index: arm * CELLS_PER_ARM + 15,
     boardSize,
   });
 
-  // Direction from tile 15 toward the center.
   const dx = g.c - cell15.x;
   const dy = g.c - cell15.y;
 
@@ -259,7 +256,6 @@ export function computeSpawnCoords(
   // Four cells centered around the middle of the arm.
   const along = (cell - (SPAWN_CELLS - 1) / 2) * spacing;
 
-  // Top spawn.
   const local = {
     x: g.c + along,
     y: g.armY - offset,

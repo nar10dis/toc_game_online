@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 export type CardRuleData = {
   name: string;
   imagePath: string;
-  /** Card values this rule is about. */
   values: number[];
   text: ReactNode;
 };

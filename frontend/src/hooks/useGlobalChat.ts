@@ -6,7 +6,6 @@ import type { ActionAnswer } from "@/lib/game/gameTypes";
 /** Longest message the server accepts. */
 export const MAX_GLOBAL_CHAT_MESSAGE_LENGTH = 200;
 
-/** One message of the chat everybody shares. */
 export type GlobalChatMessage = {
   id: number;
   userId: number;

@@ -8,7 +8,6 @@ import { handDrawnCirclePath } from "@/lib/game/handDrawn";
 /* ************************************************************************** */
 
 const PAWN_RADIUS = 16;
-/** How long the pawn takes to hop over one cell. */
 const STEP_DURATION_IN_SECONDS = 0.13;
 /** How much the pawn swells in the middle of a hop, so it reads as a jump. */
 const HOP_SCALE = 1.5;
@@ -22,7 +21,6 @@ const PAWN_WOBBLE_SEED = 7;
 /** How long a captured pawn takes to burst, then to pop back in its spawn. */
 const DEATH_BURST_DURATION = 0.35;
 const RESPAWN_DURATION = 0.3;
-/** How much it swells as it bursts. */
 const DEATH_BURST_SCALE = 1.8;
 
 /** How the pawn settles when it is not walking the track. */

@@ -3,7 +3,6 @@ import { motion } from "motion/react";
 
 import { randomBetween } from "@/lib/randomBetween";
 
-// Black and white like the drawing: everything is inked in the text colour
 const inkColor = "currentColor";
 
 // Size of the drawing, the flames stand on the logs at the bottom
@@ -17,7 +16,6 @@ const crackleEveryMinMs = 700;
 const crackleEveryMaxMs = 1800;
 const crackleLifetimeMs = 450;
 
-// The hand-drawn fire, inked in the text colour like the demons
 const fireImage = "/demons/campfire.png";
 // Size of the PNG in /public
 const fireImageWidth = 480;
@@ -40,7 +38,6 @@ type Particle = {
   createdAt: number;
 };
 
-/** The hand-drawn campfire, with embers floating up and sparks crackling out. */
 export function CracklingFire() {
   const maskId = useId();
   const [particles, setParticles] = useState<Particle[]>([]);

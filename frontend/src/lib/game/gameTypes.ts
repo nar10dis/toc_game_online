@@ -100,7 +100,6 @@ export type ActionAnswer = { ok: true } | { error: string };
 /** Longest chat message the server accepts. */
 export const MAX_CHAT_MESSAGE_LENGTH = 200;
 
-/** One message of the game chat. */
 export type ChatMessage = {
   id: number;
   seat: Seat;

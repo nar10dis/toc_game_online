@@ -28,7 +28,6 @@ export function RegisterForm({
     event.preventDefault()
     setError(null)
 
-    // form.get() reads the inputs through their name attribute
     const form = new FormData(event.currentTarget)
     const name = String(form.get("name"))
     const email = String(form.get("email"))
@@ -45,7 +44,6 @@ export function RegisterForm({
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Only these 3 fields: the backend ignores anything else
         body: JSON.stringify({ name, email, password }),
       })
 

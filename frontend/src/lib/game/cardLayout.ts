@@ -15,7 +15,6 @@ import type { Transition } from "motion/react";
 
 export type TableSize = { width: number; height: number };
 
-/** Placement of a single card on screen. */
 export type CardTransform = {
   x: number;
   y: number;

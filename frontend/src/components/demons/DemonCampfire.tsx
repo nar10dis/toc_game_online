@@ -23,11 +23,9 @@ const oneTurnInMs = 20000;
 const orbitRadiusX = 180;
 // Height of the ellipse compared to its width: small means a light tilt
 const orbitFlatness = 0.28;
-// The whole orbit leans a little
 const orbitLean = (-6 * Math.PI) / 180;
 const orbitRadiusY = orbitRadiusX * orbitFlatness;
 
-// Opacity of a demon once it is fully hidden by the fire
 const opacityBehindFire = 0;
 // Horizontal distance from the fire centre where a demon behind starts and ends fading, in px
 const fadeStartDistance = 130;
@@ -98,7 +96,6 @@ function demonAngle(elapsedMs: number, index: number) {
   return (index / demonImages.length) * 360 + (elapsedMs / oneTurnInMs) * 360;
 }
 
-/** One demon dancing its way around the fire. */
 function DancingDemon({ image, index, time }: { image: string; index: number; time: MotionValue<number> }) {
   const point = useTransform(time, (elapsedMs) => pointOnOrbit(demonAngle(elapsedMs, index)));
 
@@ -132,7 +129,6 @@ function DancingDemon({ image, index, time }: { image: string; index: number; ti
   );
 }
 
-/** The four demons dancing in a circle around a crackling campfire, leaving a trail of sparkles. */
 export function DemonCampfire() {
   const time = useTime();
 

@@ -28,7 +28,6 @@ export function LoginForm({
     event.preventDefault()
     setError(null)
 
-    // form.get() reads the inputs through their name attribute
     const form = new FormData(event.currentTarget)
     const email = String(form.get("email"))
     const password = String(form.get("password"))
@@ -47,8 +46,6 @@ export function LoginForm({
         return
       }
 
-      // The backend has put the jwt and refresh_token cookies in the browser,
-      // they are httpOnly so we never touch them here.
       // Sockets still open belong to the previous user: reopen them with the new cookie
       disconnectAllSockets()
       router.push("/menu")

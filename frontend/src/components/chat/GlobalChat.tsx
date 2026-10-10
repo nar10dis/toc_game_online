@@ -13,7 +13,6 @@ function formatTime(sentAt: number): string {
   return new Date(sentAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-/** The chat every logged in player shares, shown on the menu. */
 export function GlobalChat() {
   const { messages, sendMessage } = useGlobalChat();
   const [draft, setDraft] = useState("");

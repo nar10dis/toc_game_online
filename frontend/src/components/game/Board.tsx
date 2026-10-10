@@ -46,7 +46,6 @@ const PEN_SPEED = 2000;
 function calculateDrawTimings(boardSize: number) {
   const timings = new Array(TOTAL_CELLS);
 
-  // Four independent pens.
   for (let arm = 0; arm < TEAMS_NUMBER; arm++) {
     const startIndex = arm * CELLS_PER_ARM;
     const endIndex = startIndex + CELLS_PER_ARM;
@@ -56,7 +55,6 @@ function calculateDrawTimings(boardSize: number) {
     for (let index = startIndex; index < endIndex; index++) {
       const current = computeCoordsFromIndex({ index, boardSize });
 
-      // Move from the previous cell of THIS arm.
       if (index > startIndex) {
         const previous = computeCoordsFromIndex({ index: index - 1, boardSize });
 

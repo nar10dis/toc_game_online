@@ -42,7 +42,6 @@ function useActiveSection(sections: RuleSection[]) {
   return activeId;
 }
 
-/** Table of contents for the rules, highlighting the section being read. */
 export function RulesSidebar({ sections }: { sections: RuleSection[] }) {
   const activeId = useActiveSection(sections);
 

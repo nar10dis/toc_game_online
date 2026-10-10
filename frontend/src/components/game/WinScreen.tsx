@@ -9,7 +9,6 @@ import { SeatBadge } from "@/components/game/SeatBadge";
 /*                                 CONST DEF                                  */
 /* ************************************************************************** */
 
-/** Confetti shot from each corner of the screen. */
 const CONFETTI_PER_CORNER = 18;
 
 /** Where each corner is, and which way is "into the screen" from it. */

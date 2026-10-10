@@ -37,7 +37,6 @@ const HINT_DELAY_MS = 800;
 const HINT_WIDTH_IN_PIXELS = 260;
 /** Gap between the top of the hovered card and the bottom of the hint. */
 const HINT_GAP_IN_PIXELS = 12;
-/** Thickness of the coloured outline around a played card. */
 const PLAYER_OUTLINE_IN_PIXELS = 4;
 /** Follows the rounded corners of the card drawings. */
 const CARD_CORNER_RADIUS_IN_PIXELS = 10;
@@ -76,9 +75,7 @@ type SingleCardProps = {
   card: Card;
   /** Where the card rests right now: its slot in the hand, or the middle. */
   targetTransform: CardTransform;
-  /** Paint order against the other cards on the table. */
   stackingOrder: number;
-  /** How the card travels to `targetTransform`. */
   movementTransition: Transition;
   /** Where the card flies to when it leaves the table. */
   offScreenY: number;
@@ -241,7 +238,6 @@ type PositionedCard = {
 };
 
 type CardTableProps = {
-  /** My hand, as the server sent it. */
   hand: Card[];
   /** The discard pile, bottom card first. */
   discardPile: Card[];

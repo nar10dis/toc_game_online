@@ -22,7 +22,7 @@
 12. [Visual identity and design system](#visual-identity-and-design-system)
 13. [Error handling and logs](#error-handling-and-logs)
 14. [Individual contributions](#individual-contributions)
-15. [Challenges and trade-offs](#challenges-and-trade-offs)
+15. [Problems and decisions](#problems-and-decisions)
 16. [Resources](#resources)
 17. [Known limitations](#known-limitations)
 
@@ -61,7 +61,7 @@ Nothing else needs to be installed on the host: Node, PostgreSQL, nginx and the 
 
 ### Environment
 
-Credentials are never committed. Two example files are provided; copy them and fill in your own values:
+Credentials are never committed. Two example files are provided ([`.env.example`](.env.example), [`backend/.env.example`](backend/.env.example)); copy them and fill in your own values:
 
 ```bash
 cp .env.example .env
@@ -178,7 +178,7 @@ On start-up the backend applies the database migrations (`prisma migrate deploy`
 - **One entry point: nginx.** The browser never talks to the front end or the back end directly. `/api/` and `/ws/` go to the backend, everything else goes to Next.js.
 - **The server is the authority.** The front end applies no rule: it sends an intention ("I play this card on this pawn"), and the server checks it and accepts or refuses it.
 - **A running game lives in memory** (a `Map` in `GameService`). The database stores only what must last: users, profiles, friendships, games and who played them.
-- **The rules engine is pure.** `backend/src/game/engine/` only contains functions of the form `(state, action) → new state`, with no Nest, no Prisma and no mutation. This makes it easy to read, test and reuse.
+- **The rules engine is pure.** [`backend/src/game/engine/`](backend/src/game/engine/) only contains functions of the form `(state, action) → new state`, with no Nest, no Prisma and no mutation. This makes it easy to read, test and reuse.
 
 ### Main HTTP routes
 
@@ -207,7 +207,7 @@ All routes are prefixed with `/api`. ✔ = needs a logged-in user (`AuthGuard`).
 
 ## Database schema
 
-Schema: `backend/prisma/schema.prisma`, with one migration per change in `backend/prisma/migrations/`.
+Schema: [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma), with one migration per change in [`backend/prisma/migrations/`](backend/prisma/migrations/).
 
 ```
                  ┌──────────────────────┐
@@ -305,7 +305,7 @@ Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`
 ### 1. Frameworks (Major, 2 pts)
 - **Why:** we wanted to learn the frameworks used in companies rather than reinvent routing, validation and dependency injection.
 - **How:** Next.js 16 / React 19 for the front end, NestJS 11 for the back end (modules, guards, gateways, exception filters).
-- **Demo:** `frontend/src/pages/` (one file = one route), `backend/src/*/*.module.ts`.
+- **Demo:** [`frontend/src/pages/`](frontend/src/pages/) (one file = one route), `backend/src/*/*.module.ts`.
 
 ### 2. Real-time features with WebSockets (Major, 2 pts)
 - **Why:** a board game where four people play together needs every move to reach everyone instantly.
@@ -322,13 +322,13 @@ Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`
 
 ### 4. ORM (Minor, 1 pt)
 - **Why:** typed queries and versioned database changes that every team member can apply.
-- **How:** Prisma 7 with the `pg` adapter, schema in `schema.prisma`, migrations applied automatically on start-up.
-- **Demo:** `backend/prisma/schema.prisma`, `backend/prisma/migrations/`.
+- **How:** Prisma 7 with the `pg` adapter, schema in [`schema.prisma`](backend/prisma/schema.prisma), migrations applied automatically on start-up.
+- **Demo:** [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma), [`backend/prisma/migrations/`](backend/prisma/migrations/).
 
 ### 5. Custom-made design system (Minor, 1 pt)
 - **Why:** we wanted the game to have its own identity, not the look of a component library.
-- **How:** colour palette, type scale, icons and more than 10 reusable components built by us. See [Visual identity and design system](#visual-identity-and-design-system).
-- **Demo:** the components listed in that section, used on every page.
+- **How:** colour palette, type scale, icons and more than 10 reusable components built by us. See [docs/design-system.md](docs/design-system.md).
+- **Demo:** the components listed in that document, used on every page.
 
 ### 6. Standard user management (Major, 2 pts)
 - **Why:** players need an identity to find friends and to be recognised in a game.
@@ -358,16 +358,16 @@ Deleting a `User` deletes their `Profile`, `Friendship` and `GamePlayer` rows (`
 ### 11. Log management with ELK (Major, 2 pts)
 - **Why:** with a backend, WebSockets, background bots and nginx, we needed one place to understand what happened during a game.
 - **How:** see [Error handling and logs](#error-handling-and-logs). Logs from the backend (pino) and nginx go through Logstash into Elasticsearch and are explored in Kibana.
-  - **Retention:** an ILM policy (`elk/ilm-policy.json`) keeps the logs *hot* for 7 days, then makes them read-only (*warm*), and deletes them after 30 days.
+  - **Retention:** an ILM policy ([`elk/ilm-policy.json`](elk/ilm-policy.json)) keeps the logs *hot* for 7 days, then makes them read-only (*warm*), and deletes them after 30 days.
   - **Secured access:** Elasticsearch security is on (`xpack.security`). Each service has its own account and password from `.env`: `elastic` (admin), `kibana_system` for Kibana, and a `logstash_writer` role for Logstash that can only write to `app-logs-*`. Elasticsearch and Kibana only listen on `127.0.0.1`.
-  - **Set-up:** the one-shot `elk-setup` container (`elk/setup.sh`) creates the policy, the index template, the accounts and imports the Kibana dashboards, with no manual step.
+  - **Set-up:** the one-shot `elk-setup` container ([`elk/setup.sh`](elk/setup.sh)) creates the policy, the index template, the accounts and imports the Kibana dashboards, with no manual step.
 - **Demo:** play a move, then find it in Kibana with `context : "GameService" and gameId : <id>`.
 
 ---
 
 ## Game engine
 
-All game types are in `backend/src/game/game.types.ts`. Every engine function takes a state and returns a **new** state, without changing it.
+All game types are in [`backend/src/game/game.types.ts`](backend/src/game/game.types.ts). Every engine function takes a state and returns a **new** state, without changing it.
 
 ### Board and cards
 
@@ -410,15 +410,15 @@ Actions only contain ids, never cells: the server computes everything itself.
 
 | File | Content |
 |---|---|
-| `board.ts` | geometry: start cells, home entrances, paths, distances |
-| `deck.ts` | deck, shuffle, deal, the value of each card (the 4 is −4) |
-| `rules.ts` | can this pawn exit, move, enter home, swap…? |
-| `split.ts` | the 7 played in several parts |
-| `legalMoves.ts` | `getLegalActions` (every legal move) and `isLegal` |
-| `apply.ts` | applies a validated move: pawns, captures |
-| `state.ts` | game life cycle: create, add players, deal, play a turn, winner |
-| `view.ts` | `viewFor(game, seat)`: what one player is allowed to see |
-| `AI/` | the three bot levels |
+| [`board.ts`](backend/src/game/engine/board.ts) | geometry: start cells, home entrances, paths, distances |
+| [`deck.ts`](backend/src/game/engine/deck.ts) | deck, shuffle, deal, the value of each card (the 4 is −4) |
+| [`rules.ts`](backend/src/game/engine/rules.ts) | can this pawn exit, move, enter home, swap…? |
+| [`split.ts`](backend/src/game/engine/split.ts) | the 7 played in several parts |
+| [`legalMoves.ts`](backend/src/game/engine/legalMoves.ts) | `getLegalActions` (every legal move) and `isLegal` |
+| [`apply.ts`](backend/src/game/engine/apply.ts) | applies a validated move: pawns, captures |
+| [`state.ts`](backend/src/game/engine/state.ts) | game life cycle: create, add players, deal, play a turn, winner |
+| [`view.ts`](backend/src/game/engine/view.ts) | `viewFor(game, seat)`: what one player is allowed to see |
+| [`AI/`](backend/src/game/engine/AI/) | the three bot levels |
 
 ### One list of legal moves, used three times
 
@@ -495,145 +495,13 @@ The menu opens this socket when it mounts and closes it when it unmounts, so eac
 
 ## Visual identity and design system
 
-The site has its own identity: **beige paper**, **midnight-blue ink** and **worn, hand-drawn lines**, like an old scribbled card game. Everything starts from a few tokens defined once and reused by every component.
-
-The images of this section are in `docs/design-system/`.
-
-### Colours
-
-![Palette](docs/design-system/palette.png)
-
-Every colour is a CSS variable in `frontend/src/styles/globals.css` (`:root`). Tailwind exposes them as classes (`bg-primary`, `text-muted-foreground`…): no component writes a colour by hand.
-
-| Role | Tokens | Use |
-|---|---|---|
-| Paper | `--background`, `--card`, `--muted`, `--border` | page background, cards laid on it, borders |
-| Ink | `--foreground`, `--muted-foreground` | text, lines, drawings |
-| Blues | `--primary`, `--accent`, `--secondary` | buttons, links, focus |
-| Teams | `--team-0` to `--team-3` | the four players on the board (pawns, avatars, badges) |
-
-### Typography
-
-![Typography](docs/design-system/typography.png)
-
-- **Fraunces** (`font-heading`): titles, names, big buttons. A serif with character, which recalls playing cards.
-- **Public Sans** (`font-body`): body text and forms. Plain and readable.
-- Both are loaded with `next/font` in `_app.tsx`.
-- Sizes follow a **modular scale with a 1.333 ratio** (`@theme` in `globals.css`), from `text-sm` (0.75 rem) to `text-5xl` (4.21 rem).
-
-### Illustrations
-
-The demons, the cards and the logo (`frontend/public/`) are drawn by hand and share the same ink style as the rest of the site.
+The site has its own identity: **beige paper**, **midnight-blue ink** and **worn, hand-drawn lines**, like an old scribbled card game.
 
 <p>
-  <img src="frontend/public/demons/heart_demon.png" height="90" alt="Heart demon">
-  <img src="frontend/public/demons/spade_demon.png" height="90" alt="Spade demon">
-  <img src="frontend/public/demons/diamond_demon.png" height="90" alt="Diamond demon">
-  <img src="frontend/public/demons/club_demon.png" height="90" alt="Club demon">
+  <img src="docs/design-system/palette.png" width="440" alt="Palette">
 </p>
 
-Small interface icons come from `lucide-react` and follow the text colour (`currentColor`).
-
-### The ten signature components
-
-These components are written by us and carry the identity of the site. They get their content through their props and depend on no page: they can be used anywhere.
-
-#### 1. The logo
-
-<img src="frontend/public/logo.png" width="120" alt="TocGameOnline logo">
-
-Drawn by hand, then used as a **CSS mask** (`.logo-mask` in `globals.css`): the drawing is painted with `currentColor`, so it always takes the ink colour of the page and reacts to hover like text. It sits in the `Header` and links to the menu.
-
-#### 2. `PageLayout`
-
-![Header](docs/design-system/header.png)
-
-The shell shared by every page: the paper background (`paperStyle`), the `Header` with the logo, the centred content and the `Footer` with the Privacy Policy and Terms of Service links. Header and footer are separated from the content by a worn line. A page only has to write `<PageLayout>…</PageLayout>` to look like the rest of the site.
-
-#### 3. `WornFrame`, the worn card
-
-<img src="docs/design-system/worn-frame.png" width="320" alt="WornFrame">
-
-The "card" of the site: a double frame drawn in worn lines, each line worn in different places. Used for login, sign-up, every section of the rules, the profile, the join page, the Privacy Policy and the Terms of Service.
-
-#### 4. The worn lines
-
-![Buttons and separator](docs/design-system/buttons.png)
-
-The visual signature of the site. Every line (frames, separators, underlines, header, footer) uses two custom CSS utilities:
-
-- **`worn-line`**: an SVG noise (`feTurbulence`) is used as a mask and erases the line in places, like worn ink.
-- **`worn-underline`**: the same for link underlines, without damaging the text.
-
-Buttons and the separator start from shadcn/ui but are restyled with our tokens and typography; the separator and the `link` button variant use the worn line.
-
-#### 5. The hand-drawn circles
-
-Round shapes are never perfect circles. `lib/game/handDrawn.ts` builds SVG paths that look drawn with a pen:
-
-- `handDrawnCirclePath(cx, cy, r, seed)`: a slightly shaky circle (the board cells, the pawns, the badges, the avatars of the players, the destination markers);
-- `handDrawnLinePath(points, seed)`: a shaky line (the trail of a moving pawn).
-
-The shake depends on a fixed **seed**, so a drawing never changes from one render to the next, and the numbers are rounded so the server and the browser draw exactly the same path.
-
-#### 6. `DemonCircle`
-
-<img src="docs/design-system/demon-circle.gif" width="380" alt="DemonCircle">
-
-| Props | Role |
-|---|---|
-| `children`, `variant` | a ring of demons turning around (or over) any content, each one leaving a `SparkleTrail` behind it |
-
-Used around the login and sign-up forms, and over the profile card on the profile pages (`variant="over"`).
-
-#### 7. `DemonCampfire`
-
-<img src="docs/design-system/campfire.gif" width="440" alt="DemonCampfire and CracklingFire">
-
-The four demons dancing around the fire, on the main menu. The fire itself (`CracklingFire`) is made entirely in code, with no image.
-
-#### 8. The cards: `TiltCard` and `CardRule`
-
-<img src="docs/design-system/tilt-card.gif" width="450" alt="TiltCard on hover">
-
-| Component | Props | Role |
-|---|---|---|
-| `TiltCard` | `imagePath`, `label` | a card that tilts towards the pointer and grows on hover (`motion` spring) |
-| `CardRule` | `name`, `imagePath`, `children` | a `TiltCard` with its name and explanation |
-
-<p>
-  <img src="frontend/public/cards/card_heart_1.png" height="90" alt="Ace of hearts">
-  <img src="frontend/public/cards/card_spade_13.png" height="90" alt="King of spades">
-  <img src="frontend/public/cards/card_diamond_11.png" height="90" alt="Jack of diamonds">
-</p>
-
-![CardRule in a WornFrame](docs/design-system/card-rules.png)
-
-#### 9. `Pawn`
-
-| Props | Role |
-|---|---|
-| `color`, `position`, `path`, `isSelectable`, `onClick`… | a hand-drawn pawn in its team colour that hops cell by cell along `path` (it swells, leans and squashes when it lands), bursts when it is captured and pops back in its spawn |
-
-#### 10. `SeatBadge`
-
-| Props | Role |
-|---|---|
-| `seat`, `isTaken`, `className` | a seat's demon in a shaky circle in the team colour; greyed and dotted when the seat is free. Used in the waiting room, in the turn controls and on the win screen. |
-
-### Other components
-
-| Component | Props | Role |
-|---|---|---|
-| `Board` | `boardSize`, `bottomSeat`, `children` | the hand-drawn board, turned so that each player sees their own seat at the bottom; pawns are drawn inside it |
-| `TurnBanner` | `isMyTurn`, `mySeat` | "Your turn!" written for a moment across the board |
-| `WinScreen` | `winnerSeat`, `winnerName`, `isMe` | the win screen with confetti |
-| `AngerMarks` | `isVisible` | small anger marks above a character |
-| `CracklingFire` | — | the animated fire of the campfire, made in code |
-| `SparkleTrail` | `getSpots` | a trail of sparkles behind what moves (the demons of the ring) |
-| `DemonDrawing` | `image` | any demon drawing, inked with the palette |
-| `Title` / `Subtitle` | `children` | page titles, on the type scale |
-| `PasswordInput` | the props of an `input` | a password field with a show / hide button |
+The palette, the typography, the illustrations and the components of the design system are described in **[docs/design-system.md](docs/design-system.md)**.
 
 ---
 
@@ -654,9 +522,9 @@ Every log is a JSON object. The `service` field (`backend` / `nginx`) is added b
 
 | Layer | File | What it catches |
 |---|---|---|
-| **pino-http** | `config/logger.config.ts` | Every HTTP request: method, URL, status, duration. 5xx → error, 4xx → warn, otherwise info. |
-| **`AllExceptionFilter`** | `config/all-exceptions.filter.ts` | Any exception thrown during an HTTP request. `HttpException` (< 500) → warn `request refused`, anything else → error `unhandled error`. It then hands back to Nest, which sends the response to the client. |
-| **Manual logs** | `game.gateway.ts`, `friends.gateway.ts`, `game.service.ts` | Everything that is **not** an HTTP request: WebSocket events, bots playing in the background, disconnection timers. |
+| **pino-http** | [`config/logger.config.ts`](backend/src/config/logger.config.ts) | Every HTTP request: method, URL, status, duration. 5xx → error, 4xx → warn, otherwise info. |
+| **`AllExceptionFilter`** | [`config/all-exceptions.filter.ts`](backend/src/config/all-exceptions.filter.ts) | Any exception thrown during an HTTP request. `HttpException` (< 500) → warn `request refused`, anything else → error `unhandled error`. It then hands back to Nest, which sends the response to the client. |
+| **Manual logs** | [`game.gateway.ts`](backend/src/game/game.gateway.ts), [`friends.gateway.ts`](backend/src/friends/friends.gateway.ts), [`game.service.ts`](backend/src/game/game.service.ts) | Everything that is **not** an HTTP request: WebSocket events, bots playing in the background, disconnection timers. |
 
 **The same rule applies everywhere:** an **expected** error (wrong invite code, illegal move, expired JWT) is an `HttpException`, logged as **warn**. An **unexpected** error (JavaScript exception, database down, stuck bot) is a bug, logged as **error**.
 
@@ -666,7 +534,7 @@ Every log is a JSON object. The `service` field (`backend` / `nginx`) is added b
 - On WebSockets, the error is sent back in the client's ack (`{ error: message }`) **and** logged by `logWsError`.
 - A promise started without `await` must have its `.catch(err => this.logger.error(...))`, otherwise its error is lost.
 - No `console.log` / `console.error`: they never reach Kibana.
-- Never log a password, token or cookie: `redact` already hides them in HTTP requests (`logger.config.ts`).
+- Never log a password, token or cookie: `redact` already hides them in HTTP requests ([`logger.config.ts`](backend/src/config/logger.config.ts)).
 
 ### Finding an error
 
@@ -706,11 +574,11 @@ req.id : 21                              # the lines of one HTTP request
 
 ---
 
-## Challenges and trade-offs
+## Problems and decisions
 
-### Challenges and how we solved them
+### Problems and how we solved them
 
-| Challenge | Solution |
+| Problem | Solution |
 |---|---|
 | At first it was hard to tell what came from TypeScript, from Prisma and from NestJS. | We learned step by step with the official documentation, used AI to explain concepts, and kept the rules engine in plain TypeScript, with no framework, so it stayed simple. |
 | Connecting the front end to the back end: the front end was built first, on fake data. | We used AI to quickly wire the WebSockets in a `ws-test` branch so we could test end to end, then took the time to go back over that code by hand, understand it and clean it before merging. |
@@ -718,7 +586,7 @@ req.id : 21                              # the lines of one HTTP request
 | Games were too long to test (4 pawns × 4 players). | A test mode with one pawn per player (`QUICK_GAME=1`). |
 | Podman prevented Filebeat from reading the containers' logs. | We dropped Filebeat: the backend sends its logs straight to Logstash over TCP and nginx over syslog, which is simpler and more reliable. |
 
-### Trade-offs
+### Decisions
 
 | Choice | What we gain | What we give up |
 |---|---|---|

@@ -23,7 +23,6 @@ type LogEntry = {
   key: number;
   seat: number;
   cardId: CardId;
-  /** What the card did, written out. */
   text: string;
   /** Pieces of the 7, in order. Empty for any other card. */
   splitSteps: { steps: number; enter: boolean }[];
@@ -105,7 +104,6 @@ function describeSeven(splitSteps: LogEntry["splitSteps"]): string {
 /*                                 REACT FUNC                                 */
 /* ************************************************************************** */
 
-/** The card, tiny: its value and its suit. */
 function MiniCard({ cardId }: { cardId: CardId }) {
   const [color, valueText] = cardId.split("_");
   const value = Number(valueText);

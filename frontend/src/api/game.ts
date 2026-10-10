@@ -13,7 +13,6 @@ export async function createGame(): Promise<GameCreated> {
 
 export type CurrentGame = { gameId: number; phase: "waiting" | "playing" };
 
-/** The unfinished game we are in, null if none. */
 export async function getCurrentGame(): Promise<CurrentGame | null> {
   const response = await fetchWithRefresh("/api/game/current");
   if (!response.ok) {
