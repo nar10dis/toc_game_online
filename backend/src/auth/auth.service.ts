@@ -9,7 +9,6 @@ import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 
 
-// Pas bcrypt : il ne lit que 72 octets, identiques pour tous les jwt d'un meme user
 function hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
 }
@@ -20,7 +19,6 @@ function isSameHash(hashA: string, hashB: string): boolean {
     return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB);
 }
 
-// Volontairement simple : quelque chose@domaine.extension, sans espace
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function checkPassword(password: unknown): string
@@ -87,11 +85,11 @@ export class AuthService {
         });
         if (!user)
             throw new UnauthorizedException();
-        
+
         const password_comp = await bcrypt.compare(data.password, user.password);
         if (!password_comp)
             throw new UnauthorizedException();
-        
+
         return this.createSession(user.id, user.name);
     }
 
