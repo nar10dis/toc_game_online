@@ -27,3 +27,8 @@ export function getChatSocket(): Socket {
 
   return chatSocket;
 }
+
+export function disconnectChatSocket() {
+  chatSocket?.disconnect();
+  chatSocket = null;
+}

@@ -31,3 +31,8 @@ export function connectFriendsSocket() {
     socket.connect();
   }
 }
+
+export function disconnectFriendsSocket() {
+  friendsSocket?.disconnect();
+  friendsSocket = null;
+}

@@ -11,7 +11,7 @@ import { ProfileDetails } from "@/components/profile/ProfileDetails";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 import { ProfilePasswordForm } from "@/components/profile/ProfilePasswordForm";
 import { logout } from "@/api/auth";
-import { disconnectSocket } from "@/sockets/gameSocket";
+import { disconnectAllSockets } from "@/sockets/disconnectAllSockets";
 import { getMe } from "@/api/user";
 import type { Me } from "@/api/user";
 
@@ -53,7 +53,7 @@ export default function Profile() {
   async function handleLogout() {
     try {
       await logout();
-      disconnectSocket();
+      disconnectAllSockets();
       router.push("/login");
     } catch (error) {
       setNotice((error as Error).message);
@@ -81,7 +81,7 @@ export default function Profile() {
     content = <ProfilePasswordForm onSaved={handlePasswordChanged} onCancel={() => setMode("view")} />;
   }
   if (mode === "delete") {
-    content = <ProfileDeleteForm onDeleted={() => router.push("/login")} onCancel={() => setMode("view")} />;
+    content = <ProfileDeleteForm onDeleted={() => { disconnectAllSockets(); router.push("/login"); }} onCancel={() => setMode("view")} />;
   }
 
   const avatar = (

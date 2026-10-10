@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/auth/PasswordInput"
+import { disconnectAllSockets } from "@/sockets/disconnectAllSockets"
 
 export function LoginForm({
   className,
@@ -47,7 +48,9 @@ export function LoginForm({
       }
 
       // The backend has put the jwt and refresh_token cookies in the browser,
-      // they are httpOnly so we never touch them here
+      // they are httpOnly so we never touch them here.
+      // Sockets still open belong to the previous user: reopen them with the new cookie
+      disconnectAllSockets()
       router.push("/menu")
     } catch {
       setError("Server unreachable, try again later.")
